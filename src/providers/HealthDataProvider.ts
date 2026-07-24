@@ -39,4 +39,7 @@ export interface HealthDataProvider {
 
   /** Returns a single metric display by type */
   getMetricDisplay(type: MetricType): Promise<MetricDisplay | null>;
+
+  /** Checks if the provider is ready for data synchronization */
+  checkSyncReadiness(): Promise<{ ready: boolean; message?: string }>;
 }

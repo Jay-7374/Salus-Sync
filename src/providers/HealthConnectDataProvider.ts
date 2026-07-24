@@ -52,12 +52,18 @@ function mapToRecord(type: MetricType, result: HealthConnectMetricResult): Healt
   if (!result.available || !result.hasPermission || !result.hasData || result.value === undefined) {
     return null;
   }
+
+  if (!result.startTime || !result.endTime) {
+    console.warn(`[HealthConnectDataProvider] Metric ${type} is missing native timestamps. Skipping to prevent unstable identity.`);
+    return null;
+  }
+
   return {
     metric_type: type,
     value: result.value,
     unit: result.unit || '',
-    start_time: result.startTime || new Date().toISOString(),
-    end_time: result.endTime || new Date().toISOString(),
+    start_time: result.startTime,
+    end_time: result.endTime,
     source: result.source || 'Health Connect',
     device_name: result.deviceName,
   };
@@ -178,6 +184,19 @@ export class HealthConnectDataProvider implements HealthDataProvider {
     }
     if (!record) return emptyDisplay(type);
     return recordToDisplay(record);
+  }
+
+  async checkSyncReadiness(): Promise<{ ready: boolean; message?: string }> {
+    const avail = await HealthConnect.checkAvailability();
+    if (avail.status !== 'AVAILABLE') {
+      return { ready: false, message: 'Health Connect is not available on this device.' };
+    }
+    const perms = await HealthConnect.checkPermissions();
+    const count = perms.grantedPermissionCount ?? Object.values(perms.permissions).filter(Boolean).length;
+    if (count === 0) {
+      return { ready: false, message: 'Health Connect permissions are missing. Please grant them in the Health Data page before syncing.' };
+    }
+    return { ready: true };
   }
 }
 

@@ -136,31 +136,7 @@ function recordToDisplay(record: HealthRecord): MetricDisplay {
   };
 }
 
-function emptyDisplay(type: MetricType): MetricDisplay {
-  const labelMap: Record<MetricType, string> = {
-    HEART_RATE: 'Heart Rate',
-    STEPS:      'Steps',
-    SPO2:       'Blood Oxygen',
-    SLEEP:      'Sleep',
-  };
-  const unitMap: Record<MetricType, string> = {
-    HEART_RATE: 'bpm',
-    STEPS:      'steps',
-    SPO2:       '%',
-    SLEEP:      '',
-  };
-  return {
-    type,
-    label:          labelMap[type],
-    value:          null,
-    unit:           unitMap[type],
-    displayValue:   '--',
-    lastRecordedAt: null,
-    source:         '',
-    deviceName:     undefined,
-    hasData:        false,
-  };
-}
+
 
 // ---------------------------------------------------------------------------
 // MockHealthDataProvider implementation
@@ -200,9 +176,13 @@ export class MockHealthDataProvider implements HealthDataProvider {
   }
 
   async getMetricDisplay(type: MetricType): Promise<MetricDisplay | null> {
-    const record = ALL_MOCK_RECORDS.find(r => r.metric_type === type);
-    if (!record) return emptyDisplay(type);
-    return this.delay(recordToDisplay(record));
+    await this.delay(null);
+    const MOCK_DISPLAYS = ALL_MOCK_RECORDS.map(recordToDisplay);
+    return MOCK_DISPLAYS.find(d => d.type === type) || null;
+  }
+
+  async checkSyncReadiness(): Promise<{ ready: boolean; message?: string }> {
+    return { ready: true };
   }
 }
 

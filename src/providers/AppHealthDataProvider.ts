@@ -47,6 +47,10 @@ export class AppHealthDataProvider implements HealthDataProvider {
   getMetricDisplay(type: MetricType): Promise<MetricDisplay | null> {
     return this.provider.getMetricDisplay(type);
   }
+
+  checkSyncReadiness(): Promise<{ ready: boolean; message?: string }> {
+    return this.provider.checkSyncReadiness();
+  }
 }
 
 export const appHealthDataProvider: HealthDataProvider = new AppHealthDataProvider();

@@ -13,6 +13,7 @@ export interface HealthConnectPermissionResult {
     spo2: boolean;
     sleep: boolean;
   };
+  grantedPermissionCount?: number;
 }
 
 export interface HealthConnectMetricResult {

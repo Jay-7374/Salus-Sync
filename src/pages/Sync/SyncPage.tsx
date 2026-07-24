@@ -14,7 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { SyncFlowDiagram } from '../../components/sync/SyncFlowDiagram';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { mockHealthDataProvider } from '../../providers/MockHealthDataProvider';
+import { appHealthDataProvider } from '../../providers/AppHealthDataProvider';
 import { uploadHealthRecords, getSyncStatus } from '../../api/healthSyncApi';
 import type { SyncRequest } from '../../models/health';
 
@@ -43,7 +43,13 @@ export function SyncPage() {
   useEffect(() => {
     let cancelled = false;
     async function loadCount() {
-      const records = await mockHealthDataProvider.getAllRecords();
+      // Just check readiness for count to avoid error throws, but allow count to be zero if unready
+      const readiness = await appHealthDataProvider.checkSyncReadiness();
+      if (!readiness.ready) {
+        if (!cancelled) setHealthRecordCount(0);
+        return;
+      }
+      const records = await appHealthDataProvider.getAllRecords();
       if (!cancelled) setHealthRecordCount(records.length);
     }
     loadCount();
@@ -75,20 +81,43 @@ export function SyncPage() {
     setSyncedCount(null);
 
     try {
-      // 1. Read mock health records
-      const records = await mockHealthDataProvider.getAllRecords();
-
-      if (records.length === 0) {
+      console.log('[B2.5 Sync] Starting sync');
+      
+      // 1. Check readiness
+      const readiness = await appHealthDataProvider.checkSyncReadiness();
+      console.log('[B2.5 Sync] Readiness:', readiness);
+      
+      if (!readiness.ready) {
         setPageStatus('error');
-        setErrorMessage('No health records available to sync.');
+        setErrorMessage(readiness.message || 'Sync not ready.');
         return;
       }
 
-      // 2. Build sync request (matches backend contract exactly)
-      const request: SyncRequest = { records };
+      // 2. Read unified health records
+      const records = await appHealthDataProvider.getAllRecords();
 
-      // 3. Upload to backend
+      if (records.length === 0) {
+        setPageStatus('error');
+        setErrorMessage('No health data available to sync.');
+        return;
+      }
+
+      console.log(`[B2.5 Sync] Records prepared: ${records.length}`);
+      records.forEach(r => {
+        console.log(`[B2.5 Sync] ${r.metric_type}: ${r.value} ${r.unit}`);
+      });
+      if (records.length < 4) {
+        console.log('[B2.5 Sync] Some metrics are missing or unauthorized, proceeding with partial payload.');
+      }
+
+      // 3. Build sync request (matches backend contract exactly)
+      const request: SyncRequest = { records };
+      console.log('[B2.5 Sync] Payload prepared:', JSON.stringify(request, null, 2));
+
+      // 4. Upload to backend
+      console.log('[B2.5 Sync] Upload started');
       const result = await uploadHealthRecords(backendUrl, token, request);
+      console.log('[B2.5 Sync] Backend response:', result);
 
       if (result.error) {
         setPageStatus('error');
@@ -101,14 +130,16 @@ export function SyncPage() {
         return;
       }
 
-      // 4. Success
+      // 5. Success (Only update Last Sync here!)
+      console.log('[B2.5 Sync] Sync successful');
       const count = result.data?.synced_count ?? records.length;
       setSyncedCount(count);
       setLastSyncTime(new Date().toISOString());
       setBackendConnected(true);
       setPageStatus('success');
 
-    } catch {
+    } catch (e) {
+      console.error('[B2.5 Sync] Exception:', e);
       setPageStatus('error');
       setErrorMessage('An unexpected error occurred during sync.');
     }

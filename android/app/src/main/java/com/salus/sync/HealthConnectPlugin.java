@@ -498,8 +498,9 @@ public class HealthConnectPlugin extends Plugin {
                                 ret.put("hasData", totalSteps != null);
                                 ret.put("value", totalSteps != null ? totalSteps : 0);
                                 ret.put("unit", "steps");
+                                Instant endOfDay = nowZ.plusDays(1).toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant();
                                 ret.put("startTime", start.toString());
-                                ret.put("endTime", now.toString());
+                                ret.put("endTime", endOfDay.toString());
                                 ret.put("source", "Health Connect Aggregated");
                                 
                                 android.util.Log.d("SALUS_HEALTH_CONNECT", "Aggregated Steps result: " + ret.toString());
@@ -712,6 +713,8 @@ public class HealthConnectPlugin extends Plugin {
                                 ret.put("sleepDayStart", queryStart.toString());
                                 ret.put("nominalSleepDayEnd", nominalSleepDayEnd.toInstant().toString());
                                 ret.put("queryEnd", queryEnd.toString());
+                                ret.put("startTime", sleepDayStart.toInstant().toString());
+                                ret.put("endTime", nominalSleepDayEnd.toInstant().toString());
                                 ret.put("sessionCount", records.size());
                                 ret.put("calculationType", calcType);
                                 ret.put("usedFallbackWindow", false); // Not falling back, explicitly using completed day
