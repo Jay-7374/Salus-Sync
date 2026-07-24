@@ -36,6 +36,10 @@ import java.time.temporal.ChronoUnit;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Set;
+import androidx.health.connect.client.request.AggregateRequest;
+import androidx.health.connect.client.aggregate.AggregationResult;
+import androidx.health.connect.client.aggregate.AggregateMetric;
 
 @CapacitorPlugin(name = "HealthConnect")
 public class HealthConnectPlugin extends Plugin {
@@ -342,7 +346,7 @@ public class HealthConnectPlugin extends Plugin {
             filter,
             java.util.Collections.emptySet(),
             false, // descending to get latest first
-            1,
+            100, // Fetch up to 100 records to ensure we get the absolute latest sample across overlapping records
             null
         );
 
@@ -354,26 +358,45 @@ public class HealthConnectPlugin extends Plugin {
                     return;
                 }
                 
-                HeartRateRecord record = records.get(0);
-                List<HeartRateRecord.Sample> samples = record.getSamples();
-                if (samples.isEmpty()) {
+                // TASK 3: Heart-rate verification diagnostics
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "=== B2.4 HEART RATE DIAGNOSTICS ===");
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Total HR records returned: " + records.size());
+                
+                HeartRateRecord.Sample globalLatestSample = null;
+                HeartRateRecord sourceRecord = null;
+
+                for (HeartRateRecord r : records) {
+                    android.util.Log.d("SALUS_HEALTH_CONNECT", "Record Start: " + r.getStartTime() + " End: " + r.getEndTime() + 
+                                       " Origin: " + (r.getMetadata().getDataOrigin() != null ? r.getMetadata().getDataOrigin().getPackageName() : "null"));
+                    
+                    for (HeartRateRecord.Sample s : r.getSamples()) {
+                        if (globalLatestSample == null || s.getTime().isAfter(globalLatestSample.getTime())) {
+                            globalLatestSample = s;
+                            sourceRecord = r;
+                        }
+                    }
+                }
+                
+                if (globalLatestSample == null) {
                     call.resolve(createEmptyDataResult());
                     return;
                 }
                 
-                // Get the latest sample
-                HeartRateRecord.Sample latestSample = samples.get(samples.size() - 1);
-                
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Selected Sample Time: " + globalLatestSample.getTime());
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Selected Sample BPM: " + globalLatestSample.getBeatsPerMinute());
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Selected Data Origin: " + (sourceRecord.getMetadata().getDataOrigin() != null ? sourceRecord.getMetadata().getDataOrigin().getPackageName() : "null"));
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "===================================");
+
                 JSObject ret = new JSObject();
                 ret.put("available", true);
                 ret.put("hasPermission", true);
                 ret.put("hasData", true);
-                ret.put("value", latestSample.getBeatsPerMinute());
+                ret.put("value", globalLatestSample.getBeatsPerMinute());
                 ret.put("unit", "bpm");
-                ret.put("startTime", latestSample.getTime().toString());
-                ret.put("endTime", latestSample.getTime().toString());
+                ret.put("startTime", globalLatestSample.getTime().toString());
+                ret.put("endTime", globalLatestSample.getTime().toString());
                 
-                Metadata m = record.getMetadata();
+                Metadata m = sourceRecord.getMetadata();
                 if (m.getDataOrigin() != null) {
                     ret.put("source", m.getDataOrigin().getPackageName());
                 }
@@ -426,23 +449,79 @@ public class HealthConnectPlugin extends Plugin {
                     return;
                 }
                 
-                long totalSteps = 0;
+                // TASK 1: Diagnose incorrect step total
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "=== B2.4 STEPS DIAGNOSTICS ===");
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Number of records returned: " + records.size());
+                
+                long manualSum = 0;
+                Set<String> distinctOrigins = new HashSet<>();
+                
                 for (StepsRecord r : records) {
-                    totalSteps += r.getCount();
+                    String origin = r.getMetadata().getDataOrigin() != null ? r.getMetadata().getDataOrigin().getPackageName() : "null";
+                    distinctOrigins.add(origin);
+                    manualSum += r.getCount();
+                    android.util.Log.d("SALUS_HEALTH_CONNECT", "Record -> Count: " + r.getCount() + 
+                                       ", Start: " + r.getStartTime() + 
+                                       ", End: " + r.getEndTime() + 
+                                       ", Origin: " + origin);
                 }
                 
-                JSObject ret = new JSObject();
-                ret.put("available", true);
-                ret.put("hasPermission", true);
-                ret.put("hasData", true);
-                ret.put("value", totalSteps);
-                ret.put("unit", "steps");
-                ret.put("startTime", start.toString());
-                ret.put("endTime", now.toString());
-                ret.put("source", "Health Connect Aggregated");
-                
-                android.util.Log.d("SALUS_HEALTH_CONNECT", "Steps result: " + ret.toString());
-                call.resolve(ret);
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Raw manual sum: " + manualSum);
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Distinct data origins: " + distinctOrigins);
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "==============================");
+
+                // TASK 2: Use Health Connect aggregation semantics
+                Set<AggregateMetric<Long>> metrics = new HashSet<>();
+                metrics.add(StepsRecord.COUNT_TOTAL);
+                AggregateRequest aggregateRequest = new AggregateRequest(metrics, filter, java.util.Collections.emptySet());
+
+                Continuation<AggregationResult> aggregateCont = new Continuation<AggregationResult>() {
+                    @Override
+                    public CoroutineContext getContext() {
+                        return EmptyCoroutineContext.INSTANCE;
+                    }
+                    @Override
+                    public void resumeWith(Object res) {
+                        try {
+                            if (res != null && res.getClass().getName().contains("Result$Failure")) {
+                                android.util.Log.e("SALUS_HEALTH_CONNECT", "Aggregate Failure: " + res);
+                                call.reject("Error aggregating steps: " + res);
+                                return;
+                            }
+                            if (res instanceof AggregationResult) {
+                                AggregationResult aggRes = (AggregationResult) res;
+                                Long totalSteps = aggRes.get(StepsRecord.COUNT_TOTAL);
+                                
+                                JSObject ret = new JSObject();
+                                ret.put("available", true);
+                                ret.put("hasPermission", true);
+                                ret.put("hasData", totalSteps != null);
+                                ret.put("value", totalSteps != null ? totalSteps : 0);
+                                ret.put("unit", "steps");
+                                ret.put("startTime", start.toString());
+                                ret.put("endTime", now.toString());
+                                ret.put("source", "Health Connect Aggregated");
+                                
+                                android.util.Log.d("SALUS_HEALTH_CONNECT", "Aggregated Steps result: " + ret.toString());
+                                call.resolve(ret);
+                            } else {
+                                call.reject("Unexpected result from aggregate: " + (res != null ? res.getClass().getName() : "null"));
+                            }
+                        } catch (Exception e) {
+                            call.reject("Exception in aggregate: " + e.getMessage());
+                        }
+                    }
+                };
+
+                try {
+                    HealthConnectClient client = HealthConnectClient.getOrCreate(getContext());
+                    Object aggRet = client.aggregate(aggregateRequest, aggregateCont);
+                    if (aggRet != IntrinsicsKt.getCOROUTINE_SUSPENDED()) {
+                        aggregateCont.resumeWith(aggRet);
+                    }
+                } catch (Exception e) {
+                    call.reject("Error launching aggregate request: " + e.getMessage());
+                }
             }
 
             @Override

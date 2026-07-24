@@ -5,9 +5,10 @@
 
 import { useEffect, useState } from 'react';
 import { Heart, Footprints, Wind, Moon, RefreshCw } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { MetricDetail } from '../../components/health/MetricDetail';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { mockHealthDataProvider } from '../../providers/MockHealthDataProvider';
+import { appHealthDataProvider } from '../../providers/AppHealthDataProvider';
 import type { MetricDisplay } from '../../models/health';
 
 const METRIC_ICONS: Record<string, React.ReactNode> = {
@@ -37,7 +38,7 @@ export function HealthDataPage() {
     setStatus('loading');
     setErrorMsg('');
     try {
-      const displays = await mockHealthDataProvider.getMetricDisplays();
+      const displays = await appHealthDataProvider.getMetricDisplays();
       // Ensure consistent ordering
       const ordered = METRIC_ORDER.map(
         type => displays.find(m => m.type === type) ?? {
@@ -140,8 +141,7 @@ export function HealthDataPage() {
             color:         'var(--color-warning)',
           }}
         >
-          ⚠️ Phase A — Data is from MockHealthDataProvider.
-          In the Android app, this will be replaced by Android Health Connect.
+          ⚠️ Health Data provided by {Capacitor.isNativePlatform() ? 'Health Connect' : 'Mock Provider'}.
         </div>
 
         {/* Loading */}

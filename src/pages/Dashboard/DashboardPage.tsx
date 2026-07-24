@@ -9,12 +9,13 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { Heart, Footprints, Wind, Moon, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { MetricCard } from '../../components/health/MetricCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
-import { mockHealthDataProvider } from '../../providers/MockHealthDataProvider';
+import { appHealthDataProvider } from '../../providers/AppHealthDataProvider';
 import type { MetricDisplay } from '../../models/health';
 
 const METRIC_CONFIG = [
@@ -63,7 +64,7 @@ export function DashboardPage() {
     let cancelled = false;
     async function load() {
       setLoading(true);
-      const displays = await mockHealthDataProvider.getMetricDisplays();
+      const displays = await appHealthDataProvider.getMetricDisplays();
       if (!cancelled) {
         setMetrics(displays);
         setLoading(false);
@@ -282,7 +283,7 @@ export function DashboardPage() {
             textAlign:    'center',
           }}
         >
-          ⚠️ Phase A Prototype — Health data is from MockHealthDataProvider
+          ⚠️ Health Data provided by {Capacitor.isNativePlatform() ? 'Health Connect' : 'Mock Provider'}
         </div>
       </div>
     </div>
