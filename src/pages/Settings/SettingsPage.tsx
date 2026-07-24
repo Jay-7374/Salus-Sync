@@ -207,7 +207,7 @@ export function SettingsPage() {
         console.log('[HealthConnect B2.3] SpO2 result:', o2);
         setHcSpO2(o2);
         
-        const sl = await HealthConnect.getLatestSleep();
+        const sl = await HealthConnect.getSleepDuration();
         console.log('[HealthConnect B2.3] Sleep result:', sl);
         setHcSleep(sl);
       } catch (err) {

@@ -129,7 +129,7 @@ export class HealthConnectDataProvider implements HealthDataProvider {
    * total sleep over the entire day.
    */
   async getSleep(): Promise<HealthRecord | null> {
-    const res = await this.safeCall(() => HealthConnect.getLatestSleep());
+    const res = await this.safeCall(() => HealthConnect.getSleepDuration());
     if (!res) return null;
     return mapToRecord('SLEEP', res);
   }

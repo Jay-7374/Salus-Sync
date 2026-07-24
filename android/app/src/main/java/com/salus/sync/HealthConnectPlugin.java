@@ -600,56 +600,143 @@ public class HealthConnectPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void getLatestSleep(PluginCall call) {
+    public void getSleepDuration(PluginCall call) {
         if (HealthConnectClient.getSdkStatus(getContext(), "com.google.android.apps.healthdata") != HealthConnectClient.SDK_AVAILABLE) {
             call.resolve(createUnavailableResult());
             return;
         }
 
-        Instant now = Instant.now();
-        Instant start = now.minus(7, ChronoUnit.DAYS);
-        TimeRangeFilter filter = TimeRangeFilter.between(start, now);
+        ZonedDateTime nowZ = ZonedDateTime.now(ZoneId.systemDefault());
+        Instant now = nowZ.toInstant();
+
+        ZonedDateTime sleepDayStart;
+        ZonedDateTime nominalSleepDayEnd;
+        Instant queryEnd;
+        String calcType;
+
+        if (nowZ.getHour() < 12) {
+            // Before 12:00 PM: Active overnight sleep day
+            sleepDayStart = nowZ.minusDays(1).withHour(12).withMinute(0).withSecond(0).withNano(0);
+            nominalSleepDayEnd = nowZ.withHour(12).withMinute(0).withSecond(0).withNano(0);
+            queryEnd = now; // Query up to current time
+            calcType = "active_noon_to_now";
+        } else {
+            // At or after 12:00 PM: Display previous completed sleep day
+            sleepDayStart = nowZ.minusDays(1).withHour(12).withMinute(0).withSecond(0).withNano(0);
+            nominalSleepDayEnd = nowZ.withHour(12).withMinute(0).withSecond(0).withNano(0);
+            queryEnd = nominalSleepDayEnd.toInstant(); // Query exactly up to today's noon
+            calcType = "completed_noon_to_noon";
+        }
+
+        Instant queryStart = sleepDayStart.toInstant();
+
+        TimeRangeFilter filter = TimeRangeFilter.between(queryStart, queryEnd);
         
+        // 1. Diagnostic phase: Query raw SleepSessionRecords to log
         ReadRecordsRequest<SleepSessionRecord> req = new ReadRecordsRequest<>(
             JvmClassMappingKt.getKotlinClass(SleepSessionRecord.class),
             filter,
             java.util.Collections.emptySet(),
-            false, // descending to get latest first
-            1,
+            true, // ascending
+            100,
             null
         );
 
         performReadRecords(call, req, new ReadRecordsCallback<SleepSessionRecord>() {
             @Override
             public void onSuccess(List<SleepSessionRecord> records) {
+                // TASK: Diagnostic logging of all sessions
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "=== B2.4 SLEEP DIAGNOSTICS ===");
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Dynamic sleep window start: " + sleepDayStart);
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Nominal sleep window end: " + nominalSleepDayEnd);
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Actual query end (now): " + nowZ);
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Number of sleep records returned: " + records.size());
+                
+                long rawSumMinutes = 0;
+                Set<String> distinctOrigins = new HashSet<>();
+                
+                for (SleepSessionRecord r : records) {
+                    long durationMinutes = ChronoUnit.MINUTES.between(r.getStartTime(), r.getEndTime());
+                    rawSumMinutes += durationMinutes;
+                    String origin = r.getMetadata().getDataOrigin() != null ? r.getMetadata().getDataOrigin().getPackageName() : "null";
+                    distinctOrigins.add(origin);
+                    
+                    android.util.Log.d("SALUS_HEALTH_CONNECT", "Sleep Record -> Duration: " + durationMinutes + "m" +
+                                       ", Start: " + r.getStartTime() + 
+                                       ", End: " + r.getEndTime() + 
+                                       ", Origin: " + origin);
+                }
+                
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Naive raw duration sum: " + rawSumMinutes + "m");
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Distinct data origins: " + distinctOrigins);
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "==============================");
+                
                 if (records.isEmpty()) {
                     call.resolve(createEmptyDataResult());
                     return;
                 }
+
+                // 2. Perform official aggregation
+                Set<AggregateMetric<java.time.Duration>> metrics = new HashSet<>();
+                metrics.add(SleepSessionRecord.SLEEP_DURATION_TOTAL);
+                AggregateRequest aggregateRequest = new AggregateRequest(metrics, filter, java.util.Collections.emptySet());
                 
-                SleepSessionRecord record = records.get(0);
-                long durationMinutes = ChronoUnit.MINUTES.between(record.getStartTime(), record.getEndTime());
+                Continuation<AggregationResult> aggregateCont = new Continuation<AggregationResult>() {
+                    @Override
+                    public CoroutineContext getContext() {
+                        return EmptyCoroutineContext.INSTANCE;
+                    }
+                    @Override
+                    public void resumeWith(Object res) {
+                        try {
+                            if (res != null && res.getClass().getName().contains("Result$Failure")) {
+                                android.util.Log.e("SALUS_HEALTH_CONNECT", "Aggregate Sleep Failure: " + res);
+                                call.reject("Error aggregating sleep: " + res);
+                                return;
+                            }
+                            if (res instanceof AggregationResult) {
+                                AggregationResult aggRes = (AggregationResult) res;
+                                java.time.Duration totalSleepDuration = aggRes.get(SleepSessionRecord.SLEEP_DURATION_TOTAL);
+                                
+                                long finalDurationMinutes = 0;
+                                if (totalSleepDuration != null) {
+                                    finalDurationMinutes = totalSleepDuration.toMinutes();
+                                }
+                                
+                                JSObject ret = new JSObject();
+                                ret.put("available", true);
+                                ret.put("hasPermission", true);
+                                ret.put("hasData", totalSleepDuration != null);
+                                ret.put("value", finalDurationMinutes);
+                                ret.put("unit", "minutes");
+                                ret.put("sleepDayStart", queryStart.toString());
+                                ret.put("nominalSleepDayEnd", nominalSleepDayEnd.toInstant().toString());
+                                ret.put("queryEnd", queryEnd.toString());
+                                ret.put("sessionCount", records.size());
+                                ret.put("calculationType", calcType);
+                                ret.put("usedFallbackWindow", false); // Not falling back, explicitly using completed day
+                                ret.put("source", "Health Connect Aggregated Sleep");
+                                
+                                android.util.Log.d("SALUS_HEALTH_CONNECT", "Aggregated Sleep result: " + ret.toString());
+                                call.resolve(ret);
+                            } else {
+                                call.reject("Unexpected result from sleep aggregate: " + (res != null ? res.getClass().getName() : "null"));
+                            }
+                        } catch (Exception e) {
+                            call.reject("Exception in sleep aggregate: " + e.getMessage());
+                        }
+                    }
+                };
                 
-                JSObject ret = new JSObject();
-                ret.put("available", true);
-                ret.put("hasPermission", true);
-                ret.put("hasData", true);
-                ret.put("value", durationMinutes);
-                ret.put("unit", "minutes");
-                ret.put("startTime", record.getStartTime().toString());
-                ret.put("endTime", record.getEndTime().toString());
-                
-                Metadata m = record.getMetadata();
-                if (m.getDataOrigin() != null) {
-                    ret.put("source", m.getDataOrigin().getPackageName());
+                try {
+                    HealthConnectClient client = HealthConnectClient.getOrCreate(getContext());
+                    Object aggRet = client.aggregate(aggregateRequest, aggregateCont);
+                    if (aggRet != IntrinsicsKt.getCOROUTINE_SUSPENDED()) {
+                        aggregateCont.resumeWith(aggRet);
+                    }
+                } catch (Exception e) {
+                    call.reject("Error launching sleep aggregate request: " + e.getMessage());
                 }
-                if (m.getDevice() != null) {
-                    String deviceName = m.getDevice().getManufacturer() + " " + m.getDevice().getModel();
-                    ret.put("deviceName", deviceName.trim());
-                }
-                
-                android.util.Log.d("SALUS_HEALTH_CONNECT", "Sleep result: " + ret.toString());
-                call.resolve(ret);
             }
 
             @Override

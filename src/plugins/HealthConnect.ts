@@ -52,7 +52,7 @@ export interface HealthConnectPlugin {
   getLatestHeartRate(): Promise<HealthConnectMetricResult>;
   getTodaySteps(): Promise<HealthConnectMetricResult>;
   getLatestSpO2(): Promise<HealthConnectMetricResult>;
-  getLatestSleep(): Promise<HealthConnectMetricResult>;
+  getSleepDuration(): Promise<HealthConnectMetricResult>;
 }
 
 export const HealthConnect = registerPlugin<HealthConnectPlugin>('HealthConnect');
