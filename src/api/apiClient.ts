@@ -75,6 +75,11 @@ async function request<T>(
     const data = (await response.json()) as T;
     return { data, error: null };
   } catch (err) {
+    console.error(`[API Diagnostic] Request failed for ${method} ${url}`);
+    console.error(`[API Diagnostic] Exception:`, err);
+    if (err instanceof Error) {
+      console.error(`[API Diagnostic] Error Name: ${err.name}, Message: ${err.message}`);
+    }
     const message =
       err instanceof TypeError
         ? 'Unable to reach the server. Check your connection and backend URL.'
