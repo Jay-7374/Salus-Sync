@@ -15,6 +15,19 @@ export interface HealthConnectPermissionResult {
   };
 }
 
+export interface HealthConnectMetricResult {
+  available: boolean;
+  hasPermission: boolean;
+  hasData: boolean;
+  value?: number;
+  unit?: string;
+  startTime?: string;
+  endTime?: string;
+  source?: string;
+  deviceName?: string;
+  error?: string;
+}
+
 export interface HealthConnectPlugin {
   /**
    * Checks whether the Health Connect SDK/APK is available on this Android device.
@@ -32,6 +45,14 @@ export interface HealthConnectPlugin {
    * Requests required permissions from the user.
    */
   requestPermissions(): Promise<HealthConnectPermissionResult>;
+
+  /**
+   * B2.3 Data Reads
+   */
+  getLatestHeartRate(): Promise<HealthConnectMetricResult>;
+  getTodaySteps(): Promise<HealthConnectMetricResult>;
+  getLatestSpO2(): Promise<HealthConnectMetricResult>;
+  getLatestSleep(): Promise<HealthConnectMetricResult>;
 }
 
 export const HealthConnect = registerPlugin<HealthConnectPlugin>('HealthConnect');

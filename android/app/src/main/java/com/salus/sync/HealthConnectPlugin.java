@@ -25,6 +25,18 @@ import kotlin.coroutines.EmptyCoroutineContext;
 import kotlin.coroutines.intrinsics.IntrinsicsKt;
 import kotlin.jvm.JvmClassMappingKt;
 
+import androidx.health.connect.client.request.ReadRecordsRequest;
+import androidx.health.connect.client.time.TimeRangeFilter;
+import androidx.health.connect.client.response.ReadRecordsResponse;
+import androidx.health.connect.client.records.Record;
+import androidx.health.connect.client.records.metadata.Metadata;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.List;
+
 @CapacitorPlugin(name = "HealthConnect")
 public class HealthConnectPlugin extends Plugin {
 
@@ -233,5 +245,342 @@ public class HealthConnectPlugin extends Plugin {
         ret.put("expectedPermissions", expectedObj);
         
         call.resolve(ret);
+    }
+
+    private interface ReadRecordsCallback<T extends Record> {
+        void onSuccess(List<T> records);
+        void onError(Exception e);
+    }
+
+    private <T extends Record> void performReadRecords(PluginCall call, ReadRecordsRequest<T> request, ReadRecordsCallback<T> callback) {
+        HealthConnectClient client = HealthConnectClient.getOrCreate(getContext());
+
+        Continuation<ReadRecordsResponse<T>> cont = new Continuation<ReadRecordsResponse<T>>() {
+            @Override
+            public CoroutineContext getContext() {
+                return EmptyCoroutineContext.INSTANCE;
+            }
+
+            @Override
+            public void resumeWith(Object res) {
+                try {
+                    if (res != null && res.getClass().getName().contains("Result$Failure")) {
+                        android.util.Log.e("SALUS_HEALTH_CONNECT", "Kotlin Result.Failure received from readRecords: " + res);
+                        callback.onError(new Exception("Kotlin Result.Failure: " + res.toString()));
+                        return;
+                    }
+
+                    if (res instanceof ReadRecordsResponse) {
+                        ReadRecordsResponse<T> response = (ReadRecordsResponse<T>) res;
+                        callback.onSuccess(response.getRecords());
+                    } else {
+                        callback.onError(new Exception("Unexpected result type from readRecords: " + (res != null ? res.getClass().getName() : "null")));
+                    }
+                } catch (Exception e) {
+                    callback.onError(e);
+                }
+            }
+        };
+
+        try {
+            Object ret = client.readRecords(request, cont);
+
+            if (ret == IntrinsicsKt.getCOROUTINE_SUSPENDED()) {
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "readRecords returned COROUTINE_SUSPENDED. Waiting for resumeWith.");
+            } else {
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "readRecords completed synchronously. ret class: " + (ret != null ? ret.getClass().getName() : "null"));
+                if (ret instanceof ReadRecordsResponse) {
+                    ReadRecordsResponse<T> response = (ReadRecordsResponse<T>) ret;
+                    callback.onSuccess(response.getRecords());
+                } else {
+                    callback.onError(new Exception("Unexpected synchronous result type from readRecords: " + (ret != null ? ret.getClass().getName() : "null")));
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.e("SALUS_HEALTH_CONNECT", "Exception calling readRecords: " + e.getMessage());
+            callback.onError(e);
+        }
+    }
+
+    private JSObject createUnavailableResult() {
+        JSObject ret = new JSObject();
+        ret.put("available", false);
+        ret.put("hasPermission", false);
+        ret.put("hasData", false);
+        return ret;
+    }
+
+    private JSObject createNoPermissionResult() {
+        JSObject ret = new JSObject();
+        ret.put("available", true);
+        ret.put("hasPermission", false);
+        ret.put("hasData", false);
+        return ret;
+    }
+
+    private JSObject createEmptyDataResult() {
+        JSObject ret = new JSObject();
+        ret.put("available", true);
+        ret.put("hasPermission", true);
+        ret.put("hasData", false);
+        return ret;
+    }
+
+    @PluginMethod
+    public void getLatestHeartRate(PluginCall call) {
+        if (HealthConnectClient.getSdkStatus(getContext(), "com.google.android.apps.healthdata") != HealthConnectClient.SDK_AVAILABLE) {
+            call.resolve(createUnavailableResult());
+            return;
+        }
+
+        Instant now = Instant.now();
+        Instant start = now.minus(7, ChronoUnit.DAYS);
+        TimeRangeFilter filter = TimeRangeFilter.between(start, now);
+        
+        ReadRecordsRequest<HeartRateRecord> req = new ReadRecordsRequest<>(
+            JvmClassMappingKt.getKotlinClass(HeartRateRecord.class),
+            filter,
+            java.util.Collections.emptySet(),
+            false, // descending to get latest first
+            1,
+            null
+        );
+
+        performReadRecords(call, req, new ReadRecordsCallback<HeartRateRecord>() {
+            @Override
+            public void onSuccess(List<HeartRateRecord> records) {
+                if (records.isEmpty()) {
+                    call.resolve(createEmptyDataResult());
+                    return;
+                }
+                
+                HeartRateRecord record = records.get(0);
+                List<HeartRateRecord.Sample> samples = record.getSamples();
+                if (samples.isEmpty()) {
+                    call.resolve(createEmptyDataResult());
+                    return;
+                }
+                
+                // Get the latest sample
+                HeartRateRecord.Sample latestSample = samples.get(samples.size() - 1);
+                
+                JSObject ret = new JSObject();
+                ret.put("available", true);
+                ret.put("hasPermission", true);
+                ret.put("hasData", true);
+                ret.put("value", latestSample.getBeatsPerMinute());
+                ret.put("unit", "bpm");
+                ret.put("startTime", latestSample.getTime().toString());
+                ret.put("endTime", latestSample.getTime().toString());
+                
+                Metadata m = record.getMetadata();
+                if (m.getDataOrigin() != null) {
+                    ret.put("source", m.getDataOrigin().getPackageName());
+                }
+                if (m.getDevice() != null) {
+                    String deviceName = m.getDevice().getManufacturer() + " " + m.getDevice().getModel();
+                    ret.put("deviceName", deviceName.trim());
+                }
+                
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Heart Rate result: " + ret.toString());
+                call.resolve(ret);
+            }
+
+            @Override
+            public void onError(Exception e) {
+                if (e.getMessage() != null && e.getMessage().contains("SecurityException")) {
+                    call.resolve(createNoPermissionResult());
+                } else {
+                    call.reject("Error reading Heart Rate: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    @PluginMethod
+    public void getTodaySteps(PluginCall call) {
+        if (HealthConnectClient.getSdkStatus(getContext(), "com.google.android.apps.healthdata") != HealthConnectClient.SDK_AVAILABLE) {
+            call.resolve(createUnavailableResult());
+            return;
+        }
+        
+        ZonedDateTime nowZ = ZonedDateTime.now(ZoneId.systemDefault());
+        Instant now = nowZ.toInstant();
+        Instant start = nowZ.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant();
+        TimeRangeFilter filter = TimeRangeFilter.between(start, now);
+        
+        ReadRecordsRequest<StepsRecord> req = new ReadRecordsRequest<>(
+            JvmClassMappingKt.getKotlinClass(StepsRecord.class),
+            filter,
+            java.util.Collections.emptySet(),
+            true, // ascending
+            1000,
+            null
+        );
+
+        performReadRecords(call, req, new ReadRecordsCallback<StepsRecord>() {
+            @Override
+            public void onSuccess(List<StepsRecord> records) {
+                if (records.isEmpty()) {
+                    call.resolve(createEmptyDataResult());
+                    return;
+                }
+                
+                long totalSteps = 0;
+                for (StepsRecord r : records) {
+                    totalSteps += r.getCount();
+                }
+                
+                JSObject ret = new JSObject();
+                ret.put("available", true);
+                ret.put("hasPermission", true);
+                ret.put("hasData", true);
+                ret.put("value", totalSteps);
+                ret.put("unit", "steps");
+                ret.put("startTime", start.toString());
+                ret.put("endTime", now.toString());
+                ret.put("source", "Health Connect Aggregated");
+                
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Steps result: " + ret.toString());
+                call.resolve(ret);
+            }
+
+            @Override
+            public void onError(Exception e) {
+                if (e.getMessage() != null && e.getMessage().contains("SecurityException")) {
+                    call.resolve(createNoPermissionResult());
+                } else {
+                    call.reject("Error reading Steps: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    @PluginMethod
+    public void getLatestSpO2(PluginCall call) {
+        if (HealthConnectClient.getSdkStatus(getContext(), "com.google.android.apps.healthdata") != HealthConnectClient.SDK_AVAILABLE) {
+            call.resolve(createUnavailableResult());
+            return;
+        }
+
+        Instant now = Instant.now();
+        Instant start = now.minus(7, ChronoUnit.DAYS);
+        TimeRangeFilter filter = TimeRangeFilter.between(start, now);
+        
+        ReadRecordsRequest<OxygenSaturationRecord> req = new ReadRecordsRequest<>(
+            JvmClassMappingKt.getKotlinClass(OxygenSaturationRecord.class),
+            filter,
+            java.util.Collections.emptySet(),
+            false, // descending to get latest first
+            1,
+            null
+        );
+
+        performReadRecords(call, req, new ReadRecordsCallback<OxygenSaturationRecord>() {
+            @Override
+            public void onSuccess(List<OxygenSaturationRecord> records) {
+                if (records.isEmpty()) {
+                    call.resolve(createEmptyDataResult());
+                    return;
+                }
+                
+                OxygenSaturationRecord record = records.get(0);
+                double percentage = record.getPercentage().getValue();
+                
+                JSObject ret = new JSObject();
+                ret.put("available", true);
+                ret.put("hasPermission", true);
+                ret.put("hasData", true);
+                ret.put("value", percentage);
+                ret.put("unit", "%");
+                ret.put("startTime", record.getTime().toString());
+                ret.put("endTime", record.getTime().toString());
+                
+                Metadata m = record.getMetadata();
+                if (m.getDataOrigin() != null) {
+                    ret.put("source", m.getDataOrigin().getPackageName());
+                }
+                if (m.getDevice() != null) {
+                    String deviceName = m.getDevice().getManufacturer() + " " + m.getDevice().getModel();
+                    ret.put("deviceName", deviceName.trim());
+                }
+                
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "SpO2 result: " + ret.toString());
+                call.resolve(ret);
+            }
+
+            @Override
+            public void onError(Exception e) {
+                if (e.getMessage() != null && e.getMessage().contains("SecurityException")) {
+                    call.resolve(createNoPermissionResult());
+                } else {
+                    call.reject("Error reading SpO2: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    @PluginMethod
+    public void getLatestSleep(PluginCall call) {
+        if (HealthConnectClient.getSdkStatus(getContext(), "com.google.android.apps.healthdata") != HealthConnectClient.SDK_AVAILABLE) {
+            call.resolve(createUnavailableResult());
+            return;
+        }
+
+        Instant now = Instant.now();
+        Instant start = now.minus(7, ChronoUnit.DAYS);
+        TimeRangeFilter filter = TimeRangeFilter.between(start, now);
+        
+        ReadRecordsRequest<SleepSessionRecord> req = new ReadRecordsRequest<>(
+            JvmClassMappingKt.getKotlinClass(SleepSessionRecord.class),
+            filter,
+            java.util.Collections.emptySet(),
+            false, // descending to get latest first
+            1,
+            null
+        );
+
+        performReadRecords(call, req, new ReadRecordsCallback<SleepSessionRecord>() {
+            @Override
+            public void onSuccess(List<SleepSessionRecord> records) {
+                if (records.isEmpty()) {
+                    call.resolve(createEmptyDataResult());
+                    return;
+                }
+                
+                SleepSessionRecord record = records.get(0);
+                long durationMinutes = ChronoUnit.MINUTES.between(record.getStartTime(), record.getEndTime());
+                
+                JSObject ret = new JSObject();
+                ret.put("available", true);
+                ret.put("hasPermission", true);
+                ret.put("hasData", true);
+                ret.put("value", durationMinutes);
+                ret.put("unit", "minutes");
+                ret.put("startTime", record.getStartTime().toString());
+                ret.put("endTime", record.getEndTime().toString());
+                
+                Metadata m = record.getMetadata();
+                if (m.getDataOrigin() != null) {
+                    ret.put("source", m.getDataOrigin().getPackageName());
+                }
+                if (m.getDevice() != null) {
+                    String deviceName = m.getDevice().getManufacturer() + " " + m.getDevice().getModel();
+                    ret.put("deviceName", deviceName.trim());
+                }
+                
+                android.util.Log.d("SALUS_HEALTH_CONNECT", "Sleep result: " + ret.toString());
+                call.resolve(ret);
+            }
+
+            @Override
+            public void onError(Exception e) {
+                if (e.getMessage() != null && e.getMessage().contains("SecurityException")) {
+                    call.resolve(createNoPermissionResult());
+                } else {
+                    call.reject("Error reading Sleep: " + e.getMessage());
+                }
+            }
+        });
     }
 }
