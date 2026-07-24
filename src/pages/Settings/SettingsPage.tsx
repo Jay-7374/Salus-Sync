@@ -20,6 +20,9 @@ import { useAppConfig } from '../../context/AppConfigContext';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { getSyncStatus } from '../../api/healthSyncApi';
 import { DEFAULT_BACKEND_URL } from '../../context/AppConfigContext';
+import { useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { HealthConnect, HealthConnectPermissionResult } from '../../plugins/HealthConnect';
 
 type TestStatus = 'idle' | 'testing' | 'connected' | 'failed';
 
@@ -129,8 +132,59 @@ export function SettingsPage() {
   const [testStatus, setTestStatus]   = useState<TestStatus>('idle');
   const [testMessage, setTestMessage] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  
+  const [hcAvailability, setHcAvailability] = useState<string>('Unknown');
+  const [hcPermissions, setHcPermissions] = useState<HealthConnectPermissionResult | null>(null);
 
   const urlInputId = useId();
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      const checkHc = () => {
+        HealthConnect.checkAvailability().then(res => {
+          setHcAvailability(res.status);
+          if (res.status === 'AVAILABLE') {
+            HealthConnect.checkPermissions()
+              .then(perms => {
+                setHcPermissions(perms);
+              })
+              .catch(err => console.error('[HealthConnect B2.2] Permission check failed:', err));
+          }
+        }).catch(err => console.error('[HealthConnect B2.2] Availability check failed:', err));
+      };
+      
+      checkHc();
+
+      const handleVisibility = () => {
+        if (document.visibilityState === 'visible') {
+          checkHc();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibility);
+
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibility);
+      };
+    } else {
+      setHcAvailability('Not Android');
+    }
+  }, []);
+
+  async function handleGrantPermissions() {
+    if (hcAvailability === 'AVAILABLE') {
+      console.log('[HealthConnect B2.2] Requesting permissions...');
+      try {
+        await HealthConnect.requestPermissions();
+        console.log('[HealthConnect B2.2] Permission request returned');
+        // Authoritatively re-check permissions as requested
+        const finalResult = await HealthConnect.checkPermissions();
+        console.log('[HealthConnect B2.2] Final authoritative permissions:', JSON.stringify(finalResult, null, 2));
+        setHcPermissions(finalResult);
+      } catch (err) {
+        console.error('[HealthConnect B2.2] Permission request failed:', err);
+      }
+    }
+  }
 
   function handleSaveUrl() {
     const trimmed = urlInput.trim();
@@ -391,6 +445,47 @@ export function SettingsPage() {
               >
                 Android
               </span>
+            </div>
+          </Card>
+        </section>
+
+        {/* HEALTH CONNECT (DIAGNOSTIC B2.2) */}
+        <section aria-label="Health Connect">
+          <SectionHeader title="Health Connect (Diagnostic)" />
+          <Card>
+            <div style={{ padding: 'var(--space-4)' }}>
+              <p style={{ margin: 0, marginBottom: 'var(--space-3)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>
+                Status: <span style={{ color: hcAvailability === 'AVAILABLE' ? 'var(--color-success)' : 'var(--color-text-secondary)' }}>{hcAvailability}</span>
+              </p>
+              
+              <div style={{ marginBottom: 'var(--space-4)' }}>
+                <p style={{ margin: 0, marginBottom: 'var(--space-2)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>Permissions:</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+                  <div>Heart Rate: <span style={{ color: hcPermissions?.permissions.heartRate ? 'var(--color-success)' : 'var(--color-error)' }}>{hcPermissions?.permissions.heartRate ? 'Granted' : 'Not granted'}</span></div>
+                  <div>Steps: <span style={{ color: hcPermissions?.permissions.steps ? 'var(--color-success)' : 'var(--color-error)' }}>{hcPermissions?.permissions.steps ? 'Granted' : 'Not granted'}</span></div>
+                  <div>Blood Oxygen: <span style={{ color: hcPermissions?.permissions.spo2 ? 'var(--color-success)' : 'var(--color-error)' }}>{hcPermissions?.permissions.spo2 ? 'Granted' : 'Not granted'}</span></div>
+                  <div>Sleep: <span style={{ color: hcPermissions?.permissions.sleep ? 'var(--color-success)' : 'var(--color-error)' }}>{hcPermissions?.permissions.sleep ? 'Granted' : 'Not granted'}</span></div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleGrantPermissions}
+                disabled={hcAvailability !== 'AVAILABLE'}
+                style={{
+                  width: '100%',
+                  padding: 'var(--space-3)',
+                  background: 'var(--color-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: 'var(--font-weight-semibold)',
+                  cursor: hcAvailability === 'AVAILABLE' ? 'pointer' : 'not-allowed',
+                  opacity: hcAvailability === 'AVAILABLE' ? 1 : 0.6,
+                }}
+              >
+                Grant Health Permissions
+              </button>
             </div>
           </Card>
         </section>
