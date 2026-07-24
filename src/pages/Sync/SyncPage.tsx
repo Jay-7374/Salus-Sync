@@ -81,11 +81,8 @@ export function SyncPage() {
     setSyncedCount(null);
 
     try {
-      console.log('[B2.5 Sync] Starting sync');
-      
       // 1. Check readiness
       const readiness = await appHealthDataProvider.checkSyncReadiness();
-      console.log('[B2.5 Sync] Readiness:', readiness);
       
       if (!readiness.ready) {
         setPageStatus('error');
@@ -102,22 +99,11 @@ export function SyncPage() {
         return;
       }
 
-      console.log(`[B2.5 Sync] Records prepared: ${records.length}`);
-      records.forEach(r => {
-        console.log(`[B2.5 Sync] ${r.metric_type}: ${r.value} ${r.unit}`);
-      });
-      if (records.length < 4) {
-        console.log('[B2.5 Sync] Some metrics are missing or unauthorized, proceeding with partial payload.');
-      }
-
       // 3. Build sync request (matches backend contract exactly)
       const request: SyncRequest = { records };
-      console.log('[B2.5 Sync] Payload prepared:', JSON.stringify(request, null, 2));
 
       // 4. Upload to backend
-      console.log('[B2.5 Sync] Upload started');
       const result = await uploadHealthRecords(backendUrl, token, request);
-      console.log('[B2.5 Sync] Backend response:', result);
 
       if (result.error) {
         setPageStatus('error');
@@ -131,7 +117,6 @@ export function SyncPage() {
       }
 
       // 5. Success (Only update Last Sync here!)
-      console.log('[B2.5 Sync] Sync successful');
       const count = result.data?.synced_count ?? records.length;
       setSyncedCount(count);
       setLastSyncTime(new Date().toISOString());
@@ -139,7 +124,6 @@ export function SyncPage() {
       setPageStatus('success');
 
     } catch (e) {
-      console.error('[B2.5 Sync] Exception:', e);
       setPageStatus('error');
       setErrorMessage('An unexpected error occurred during sync.');
     }

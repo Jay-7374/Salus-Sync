@@ -22,7 +22,7 @@ import { getSyncStatus } from '../../api/healthSyncApi';
 import { DEFAULT_BACKEND_URL } from '../../context/AppConfigContext';
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { HealthConnect, HealthConnectPermissionResult, HealthConnectMetricResult } from '../../plugins/HealthConnect';
+import { HealthConnect, HealthConnectPermissionResult } from '../../plugins/HealthConnect';
 
 type TestStatus = 'idle' | 'testing' | 'connected' | 'failed';
 
@@ -135,11 +135,6 @@ export function SettingsPage() {
   
   const [hcAvailability, setHcAvailability] = useState<string>('Unknown');
   const [hcPermissions, setHcPermissions] = useState<HealthConnectPermissionResult | null>(null);
-  
-  const [hcHeartRate, setHcHeartRate] = useState<HealthConnectMetricResult | null>(null);
-  const [hcSteps, setHcSteps] = useState<HealthConnectMetricResult | null>(null);
-  const [hcSpO2, setHcSpO2] = useState<HealthConnectMetricResult | null>(null);
-  const [hcSleep, setHcSleep] = useState<HealthConnectMetricResult | null>(null);
 
   const urlInputId = useId();
 
@@ -153,9 +148,9 @@ export function SettingsPage() {
               .then(perms => {
                 setHcPermissions(perms);
               })
-              .catch(err => console.error('[HealthConnect B2.2] Permission check failed:', err));
+              .catch(() => {});
           }
-        }).catch(err => console.error('[HealthConnect B2.2] Availability check failed:', err));
+        }).catch(() => {});
       };
       
       checkHc();
@@ -177,41 +172,13 @@ export function SettingsPage() {
 
   async function handleGrantPermissions() {
     if (hcAvailability === 'AVAILABLE') {
-      console.log('[HealthConnect B2.2] Requesting permissions...');
       try {
         await HealthConnect.requestPermissions();
-        console.log('[HealthConnect B2.2] Permission request returned');
         // Authoritatively re-check permissions as requested
         const finalResult = await HealthConnect.checkPermissions();
-        console.log('[HealthConnect B2.2] Final authoritative permissions:', JSON.stringify(finalResult, null, 2));
         setHcPermissions(finalResult);
       } catch (err) {
-        console.error('[HealthConnect B2.2] Permission request failed:', err);
-      }
-    }
-  }
-
-  async function handleReadData() {
-    if (hcAvailability === 'AVAILABLE') {
-      console.log('[HealthConnect B2.3] Starting live data read');
-      try {
-        const hr = await HealthConnect.getLatestHeartRate();
-        console.log('[HealthConnect B2.3] Heart Rate result:', hr);
-        setHcHeartRate(hr);
-        
-        const st = await HealthConnect.getTodaySteps();
-        console.log('[HealthConnect B2.3] Steps result:', st);
-        setHcSteps(st);
-        
-        const o2 = await HealthConnect.getLatestSpO2();
-        console.log('[HealthConnect B2.3] SpO2 result:', o2);
-        setHcSpO2(o2);
-        
-        const sl = await HealthConnect.getSleepDuration();
-        console.log('[HealthConnect B2.3] Sleep result:', sl);
-        setHcSleep(sl);
-      } catch (err) {
-        console.error('[HealthConnect B2.3] Read data failed:', err);
+        // Silently ignore or handle failure
       }
     }
   }
@@ -247,9 +214,15 @@ export function SettingsPage() {
     }
   }
 
-  function handleLogout() {
-    clearSession();
-    navigate('/login', { replace: true });
+  async function handleLogout() {
+    try {
+      await clearSession();
+      navigate('/login', { replace: true });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Storage error during logout');
+      // Already cleared in memory, so just navigate
+      navigate('/login', { replace: true });
+    }
   }
 
   return (
@@ -479,9 +452,9 @@ export function SettingsPage() {
           </Card>
         </section>
 
-        {/* HEALTH CONNECT (DIAGNOSTIC B2.2) */}
+        {/* HEALTH CONNECT PERMISSIONS */}
         <section aria-label="Health Connect">
-          <SectionHeader title="Health Connect (Diagnostic)" />
+          <SectionHeader title="Health Permissions" />
           <Card>
             <div style={{ padding: 'var(--space-4)' }}>
               <p style={{ margin: 0, marginBottom: 'var(--space-3)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>
@@ -517,48 +490,6 @@ export function SettingsPage() {
               >
                 Grant Health Permissions
               </button>
-
-              <button
-                onClick={handleReadData}
-                disabled={hcAvailability !== 'AVAILABLE'}
-                style={{
-                  width: '100%',
-                  padding: 'var(--space-3)',
-                  background: 'var(--color-mint-bg)',
-                  color: 'var(--color-primary)',
-                  border: '1.5px solid var(--color-mint-border)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-semibold)',
-                  cursor: hcAvailability === 'AVAILABLE' ? 'pointer' : 'not-allowed',
-                  opacity: hcAvailability === 'AVAILABLE' ? 1 : 0.6,
-                  marginBottom: 'var(--space-4)'
-                }}
-              >
-                Read Live Data (B2.3)
-              </button>
-              
-              <div style={{ marginBottom: 'var(--space-2)' }}>
-                <p style={{ margin: 0, marginBottom: 'var(--space-2)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>Live Data Results:</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
-                  <div>
-                    Heart Rate: 
-                    {hcHeartRate ? (hcHeartRate.hasData ? ` ${hcHeartRate.value} ${hcHeartRate.unit}` : (hcHeartRate.hasPermission ? ' No data in last 7 days' : ' No permission')) : ' Not read'}
-                  </div>
-                  <div>
-                    Steps: 
-                    {hcSteps ? (hcSteps.hasData ? ` ${hcSteps.value} ${hcSteps.unit}` : (hcSteps.hasPermission ? ' No data today' : ' No permission')) : ' Not read'}
-                  </div>
-                  <div>
-                    Blood Oxygen: 
-                    {hcSpO2 ? (hcSpO2.hasData ? ` ${hcSpO2.value}${hcSpO2.unit}` : (hcSpO2.hasPermission ? ' No data in last 7 days' : ' No permission')) : ' Not read'}
-                  </div>
-                  <div>
-                    Sleep: 
-                    {hcSleep ? (hcSleep.hasData ? ` ${hcSleep.value} ${hcSleep.unit}` : (hcSleep.hasPermission ? ' No data in last 7 days' : ' No permission')) : ' Not read'}
-                  </div>
-                </div>
-              </div>
             </div>
           </Card>
         </section>
@@ -596,19 +527,6 @@ export function SettingsPage() {
                 Companion app for the SALUS healthcare platform.
                 Syncs wearable health data with your SALUS patient record.
               </p>
-              <div
-                style={{
-                  marginTop:    'var(--space-3)',
-                  padding:      'var(--space-3)',
-                  background:   'var(--color-warning-bg)',
-                  border:       '1px solid #fde68a',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize:     'var(--font-size-xs)',
-                  color:        'var(--color-warning)',
-                }}
-              >
-                ⚠️ Phase A Web Prototype — Not the final Android application.
-              </div>
             </div>
           </Card>
         </section>

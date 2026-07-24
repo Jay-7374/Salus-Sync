@@ -3,10 +3,10 @@
  *
  * Manages authentication state: user info + JWT token.
  *
- * Persistence: localStorage (Phase A prototype).
- * Android port: Replace with Android DataStore / EncryptedSharedPreferences.
+ * Persistence: SessionStorage (Native Android Keystore or Browser localStorage).
  *
- * Security note: The token is stored in localStorage for Phase A prototyping only.
+ * Security note: On Android, the JWT is encrypted in Keystore. On the web prototype,
+ * it falls back to localStorage.
  * Never logged, never displayed in the UI.
  *
  * Only users with role === 'patient' are considered valid SALUS Sync users.
@@ -21,8 +21,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { AuthSession, UserInfo } from '../models/auth';
-
-const STORAGE_KEY = 'salus_sync_session';
+import { SessionStorage } from '../services/SessionStorage';
 
 interface AuthContextValue {
   /** Current authenticated user, or null if not logged in */
@@ -34,9 +33,9 @@ interface AuthContextValue {
   /** Returns true if user is authenticated */
   isAuthenticated: boolean;
   /** Store the session after successful login */
-  setSession: (token: string, user: UserInfo) => void;
+  setSession: (token: string, user: UserInfo) => Promise<void>;
   /** Clear the session (logout) */
-  clearSession: () => void;
+  clearSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -45,45 +44,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSessionState] = useState<AuthSession | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  // Rehydrate session from localStorage on mount
+  // Rehydrate session from storage on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed: AuthSession = JSON.parse(raw);
-        if (parsed?.token && parsed?.user) {
-          setSessionState(parsed);
+    async function loadSession() {
+      try {
+        const session = await SessionStorage.getSession();
+        if (session) {
+          setSessionState(session);
         }
+      } catch {
+        // Ignore initialization errors
+      } finally {
+        setIsReady(true);
       }
-    } catch {
-      // Corrupted storage — ignore and start fresh
-      localStorage.removeItem(STORAGE_KEY);
-    } finally {
-      setIsReady(true);
     }
+    loadSession();
   }, []);
 
-  const setSession = useCallback((token: string, user: UserInfo) => {
+  const setSession = useCallback(async (token: string, user: UserInfo) => {
     const newSession: AuthSession = {
       token,
       user,
       createdAt: new Date().toISOString(),
     };
+    await SessionStorage.setSession(newSession);
+    // Only update in-memory state if secure write succeeds
     setSessionState(newSession);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
-    } catch {
-      // localStorage unavailable — session is in-memory only
-    }
   }, []);
 
-  const clearSession = useCallback(() => {
-    setSessionState(null);
+  const clearSession = useCallback(async () => {
     try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
+      await SessionStorage.clearSession();
+    } catch (err) {
+      // Re-throw so the caller can alert the user about the storage error
+      setSessionState(null);
+      throw err;
     }
+    setSessionState(null);
   }, []);
 
   const value: AuthContextValue = {

@@ -1,0 +1,4873 @@
+<USER_REQUEST>
+We are building a new standalone companion application called:
+
+SALUS Sync
+
+This is a separate project/repository from the existing SALUS healthcare web platform.
+
+SALUS Sync will eventually become a small native Android companion app whose purpose is:
+
+Health Connect → SALUS Sync → FastAPI Backend → Supabase → SALUS Patient Dashboard
+
+However, we are currently implementing:
+
+PHASE A — WEB UI PROTOTYPE
+
+The goal of Phase A is to build and validate the complete user interface, navigation, authentication flow structure, health-data presentation, synchronization UX, and API architecture before recreating/porting the application as a native Android app using Kotlin + Jetpack Compose.
+
+IMPORTANT:
+This Phase A application runs in a browser.
+
+A browser CANNOT directly access Android Health Connect.
+
+Therefore:
+
+- Do NOT attempt to implement Health Connect.
+- Do NOT build fake browser integrations pretending to access Health Connect.
+- Use a clearly isolated mock health-data provider for UI development only.
+- Design the architecture so MockHealthDataProvider can later be replaced conceptually by HealthConnectDataProvider in the native Android app.
+- Do NOT modify the existing SALUS backend.
+- Do NOT create database tables.
+- Do NOT create new backend endpoints.
+- Do NOT implement registration.
+
+=========================================================
+1. TECHNOLOGY
+=========================================================
+
+Build the web prototype using:
+
+- React
+- Vite
+- JavaScript or TypeScript, preferably TypeScript if starting fresh
+- React Router
+- Clean reusable components
+- CSS or the styling system already configured in the generated project
+
+Keep dependencies minimal.
+
+Do NOT add unnecessary frameworks.
+
+The interface should be responsive and designed primarily as a MOBILE APP interface.
+
+On desktop, display the application inside a centered phone-like/max-width application shell rather than stretching everything across the entire screen.
+
+=========================================================
+2. BRAND / DESIGN
+=========================================================
+
+Application name:
+
+SALUS Sync
+
+The design should visually belong to the existing SALUS healthcare ecosystem.
+
+Visual direction:
+
+- Clean healthcare interface
+- Modern
+- Minimal
+- Calm
+- Premium but simple
+- Mobile-first
+- White / subtle warm-white surfaces
+- SALUS green as primary accent
+- Soft mint secondary backgrounds
+- Rounded cards
+- Subtle borders and shadows
+- Clear typography
+- No excessive gradients
+- No clutter
+
+Suggested SALUS primary green:
+
+#14866D
+
+Suggested light mint:
+
+#E6F4F1
+
+Suggested subtle cream:
+
+#FCFBF7
+
+Do not blindly hardcode these everywhere.
+
+Create reusable theme variables/tokens.
+
+Use a simple SALUS leaf/health-inspired logo placeholder if an official asset is not available.
+
+=========================================================
+3. APPLICATION FLOW
+=========================================================
+
+Implement this flow:
+
+Splash
+   ↓
+Login
+   ↓
+Dashboard
+   ├── Health Data
+   ├── Sync
+   └── Settings
+   ↓
+Logout → Login
+
+There is NO registration screen.
+
+Registration is performed only through the main SALUS website.
+
+=========================================================
+4. SPLASH SCREEN
+=========================================================
+
+Create a minimal splash screen.
+
+Show:
+
+SALUS Sync logo/icon
+
+SALUS Sync
+
+Optional subtitle:
+
+"Your health, connected."
+
+The splash should transition naturally to Login or Dashboard depending on whether an authenticated session exists.
+
+For Phase A, session persistence may use localStorage.
+
+=========================================================
+5. LOGIN SCREEN
+=========================================================
+
+Create a polished mobile login screen.
+
+Fields:
+
+Username
+
+Password
+
+Controls:
+
+Show/hide password
+
+Sign In button
+
+Loading state
+
+Error message area
+
+Include text:
+
+"Don't have an account?"
+
+"Create your account on the SALUS web platform."
+
+Do NOT create a Register button that performs registration.
+
+The existing backend login contract is:
+
+POST /api/auth/login
+
+Request:
+
+{
+  "username": "string",
+  "password": "string"
+}
+
+Successful response:
+
+{
+  "access_token": "...",
+  "token_type": "bearer",
+  "user": {
+    "id": 22,
+    "name": "jp",
+    "email": "sample@gmail.com",
+    "role": "patient"
+  }
+}
+
+Design the frontend API layer around this exact response.
+
+Store session information cleanly.
+
+Do not expose the JWT visibly in the UI.
+
+Only patient users should be considered valid SALUS Sync users.
+
+Handle:
+
+- Invalid credentials
+- Network failure
+- Backend unavailable
+- Loading
+- Successful login
+
+=========================================================
+6. MAIN DASHBOARD
+=========================================================
+
+After login, show a clean mobile dashboard.
+
+Header:
+
+SALUS Sync
+
+Greeting:
+
+"Hello, {user.name}"
+
+Small connection/status indicator.
+
+Example:
+
+● Ready to Sync
+
+or
+
+● Backend Connected
+
+Create four primary health metric cards:
+
+1. Heart Rate
+
+Display:
+
+72 bpm
+
+Icon:
+Heart / pulse
+
+2. Steps
+
+Display:
+
+3,240 steps
+
+3. Blood Oxygen
+
+Display:
+
+98%
+
+Use metric identifier:
+
+SPO2
+
+4. Sleep
+
+Display:
+
+7h 12m
+
+Use metric identifier:
+
+SLEEP
+
+These values should initially come from MockHealthDataProvider.
+
+Clearly isolate mock data from UI components.
+
+The UI components must NOT contain hardcoded health readings directly.
+
+=========================================================
+7. HEALTH DATA SECTION
+=========================================================
+
+Create a Health Data screen accessible from bottom navigation.
+
+Display:
+
+Heart Rate
+Steps
+Blood Oxygen
+Sleep
+
+Each metric should show:
+
+- Latest value
+- Unit
+- Last recorded time
+- Source
+- Device name if available
+
+Example:
+
+Heart Rate
+
+72 bpm
+
+Last recorded: Today, 11:45 AM
+
+Source: Health Connect
+
+Device: HONOR Band
+
+For Phase A this information is mocked.
+
+Add empty states.
+
+Example:
+
+"No sleep records available yet."
+
+This is important because Health Connect may legitimately contain no data for a metric.
+
+Do NOT invent values when data is unavailable.
+
+=========================================================
+8. SYNC SCREEN / SYNC CARD
+=========================================================
+
+Synchronization is the central purpose of the app.
+
+Create a prominent synchronization interface.
+
+Show:
+
+Health Connect
+
+↓
+
+SALUS Sync
+
+↓
+
+SALUS Cloud
+
+Visual status indicators should show:
+
+Health data available
+
+Backend connection
+
+Last successful sync
+
+Example:
+
+Health Data
+4 metrics available
+
+Backend
+Connected
+
+Last Sync
+Today, 12:01 PM
+
+Add a large primary button:
+
+Sync Now
+
+When pressed in Phase A:
+
+1. Read mock health records.
+2. Transform them into the backend upload schema.
+3. Simulate or optionally execute the API request depending on configuration.
+4. Show loading/progress.
+5. Show success/failure state.
+
+Success example:
+
+✓ Sync Complete
+
+"12 health records synchronized."
+
+Failure example:
+
+"Sync failed. Check your connection and try again."
+
+Include Retry where appropriate.
+
+=========================================================
+9. BACKEND HEALTH DATA CONTRACT
+=========================================================
+
+The existing backend supports:
+
+GET
+/api/v1/health-sync/status
+
+POST
+/api/v1/health-sync
+
+GET
+/api/v1/health-metrics/latest
+
+GET
+/api/v1/health-metrics/history
+
+Authentication:
+
+Authorization: Bearer <access_token>
+
+The upload body is:
+
+{
+  "records": [
+    {
+      "metric_type": "HEART_RATE",
+      "value": 72,
+      "unit": "bpm",
+      "start_time": "ISO-8601 datetime",
+      "end_time": "ISO-8601 datetime",
+      "source": "Health Connect",
+      "device_name": "HONOR Band"
+    }
+  ]
+}
+
+Allowed metric types:
+
+HEART_RATE
+STEPS
+SLEEP
+SPO2
+
+Create TypeScript interfaces/models corresponding to these contracts.
+
+IMPORTANT:
+
+Do not change these contracts.
+
+Do not invent additional backend fields.
+
+Do not send user_id from the client.
+
+The backend derives user identity from the JWT.
+
+=========================================================
+10. MOCK HEALTH DATA PROVIDER
+=========================================================
+
+Create an abstraction such as:
+
+HealthDataProvider
+
+and an implementation:
+
+MockHealthDataProvider
+
+Conceptually:
+
+HealthDataProvider
+        ↑
+MockHealthDataProvider — Phase A Web
+
+Later:
+
+HealthConnectDataProvider — Native Android
+
+Provide methods conceptually similar to:
+
+getHeartRate()
+
+getSteps()
+
+getSleep()
+
+getSpO2()
+
+getAllRecords()
+
+Keep this layer independent from React UI components.
+
+Generate realistic but clearly development-only sample records.
+
+Do NOT randomly change values on every render.
+
+=========================================================
+11. SETTINGS SCREEN
+=========================================================
+
+Create Settings accessible from bottom navigation.
+
+Sections:
+
+ACCOUNT
+
+Name
+Email
+Role
+
+CONNECTION
+
+Backend URL
+
+Default placeholder/configuration:
+
+https://YOUR_RENDER_BACKEND_URL/
+
+Allow editing the backend URL.
+
+Buttons:
+
+Save
+
+Test Connection
+
+Test Connection should call:
+
+GET /api/v1/health-sync/status
+
+using the stored JWT.
+
+Show:
+
+Connected
+
+or
+
+Connection Failed
+
+Also support local development URLs such as:
+
+http://192.168.x.x:8000/
+
+Do not assume localhost will work when this later becomes an Android app.
+
+SYNC
+
+Show:
+
+Last sync time
+
+Auto Sync
+
+For Phase A, Auto Sync should be presented as:
+
+"Available in Android app"
+
+Do NOT pretend browser background sync is equivalent to Android WorkManager.
+
+ABOUT
+
+SALUS Sync
+
+Version 1.0.0 Prototype
+
+Include:
+
+"Companion app for the SALUS healthcare platform."
+
+=========================================================
+12. LOGOUT
+=========================================================
+
+Provide Logout in Settings.
+
+On logout:
+
+- Clear authentication token
+- Clear user session
+- Return to Login
+
+Do NOT necessarily delete backend URL preference unless intentionally resetting settings.
+
+=========================================================
+13. BOTTOM NAVIGATION
+=========================================================
+
+Create a mobile bottom navigation bar.
+
+Tabs:
+
+Home
+
+Health
+
+Sync
+
+Settings
+
+Use simple consistent icons.
+
+Keep navigation fixed and mobile-friendly.
+
+=========================================================
+14. STATE HANDLING
+=========================================================
+
+Every important screen must handle:
+
+Loading
+
+Success
+
+Empty
+
+Error
+
+Offline/backend unavailable
+
+Do not leave blank screens.
+
+Use clean inline feedback rather than excessive alert() dialogs.
+
+=========================================================
+15. RESPONSIVENESS
+=========================================================
+
+Primary target:
+
+Mobile portrait.
+
+Also support:
+
+Tablet
+
+Desktop browser
+
+Desktop should NOT stretch the mobile application across the entire monitor.
+
+Use a centered responsive app shell.
+
+No horizontal overflow.
+
+No clipped text.
+
+No elements extending outside the viewport.
+
+=========================================================
+16. ACCESSIBILITY / UX
+=========================================================
+
+Ensure:
+
+- Proper button labels
+- Adequate contrast
+- Visible focus states
+- Large touch targets
+- Password visibility toggle
+- Loading indicators
+- Disabled buttons while submitting
+- Meaningful empty states
+- No inaccessible icon-only actions without labels
+
+=========================================================
+17. SECURITY
+=========================================================
+
+Do NOT:
+
+- Hardcode credentials
+- Hardcode real JWTs
+- Put Supabase service keys in frontend code
+- Directly access Supabase from this prototype
+- Send user_id manually with health records
+- Log passwords
+- Log access tokens
+- Display tokens
+
+The frontend communicates only with the existing FastAPI backend.
+
+For Phase A, localStorage may be used for prototype session persistence, but structure authentication storage so it can later be replaced by Android DataStore/secure storage.
+
+=========================================================
+18. ARCHITECTURE
+=========================================================
+
+Use a clean structure similar to:
+
+src/
+
+components/
+  common/
+  health/
+  sync/
+
+pages/
+  Splash/
+  Login/
+  Dashboard/
+  HealthData/
+  Sync/
+  Settings/
+
+api/
+  apiClient
+  authApi
+  healthSyncApi
+
+models/
+
+providers/
+  HealthDataProvider
+  MockHealthDataProvider
+
+context/ or store/
+  auth state
+  app configuration
+
+hooks/
+
+utils/
+
+styles/
+
+Do not over-engineer.
+
+Keep components modular and readable.
+
+=========================================================
+19. IMPORTANT PHASE B PREPARATION
+=========================================================
+
+This web prototype will later be recreated/ported into:
+
+Kotlin
+Jetpack Compose
+Health Connect SDK
+DataStore
+WorkManager
+
+Therefore:
+
+Keep UI logic separated from data-access logic.
+
+Keep API models explicit.
+
+Keep health-data provider abstraction explicit.
+
+Do not create browser-specific hacks that would be difficult to reproduce in Android.
+
+The conceptual architecture should remain:
+
+UI
+
+↓
+
+View/Application State
+
+↓
+
+HealthDataProvider + API Layer
+
+↓
+
+Backend
+
+The Android implementation will replace:
+
+MockHealthDataProvider
+
+with:
+
+HealthConnectDataProvider
+
+and browser/localStorage persistence with Android DataStore.
+
+=========================================================
+20. DO NOT IMPLEMENT YET
+=========================================================
+
+Do NOT implement:
+
+- Actual Android Health Connect
+- Native Android code
+- WorkManager
+- Real background synchronization
+- Registration
+- Push notifications
+- Firebase
+- Direct Supabase access
+- Scheduling
+- Medication features
+- AI assistant
+- Chatbot
+- Doctor functionality
+- Admin functionality
+
+SALUS Sync should remain a tiny focused companion app.
+
+=========================================================
+21. EXECUTION ORDER
+=========================================================
+
+Implement Phase A in this order:
+
+1. Audit/create project structure.
+2. Create theme/design tokens.
+3. Create reusable mobile app shell.
+4. Create Splash.
+5. Create Login.
+6. Create bottom navigation.
+7. Create Dashboard.
+8. Create Health Data screen.
+9. Create Sync screen.
+10. Create Settings.
+11. Create HealthDataProvider abstraction.
+12. Create MockHealthDataProvider.
+13. Create API models/client architecture.
+14. Connect login to the existing API only if a valid backend URL is configured.
+15. Implement backend connection test.
+16. Implement Sync Now flow.
+17. Verify responsive behavior.
+18. Run production build.
+
+Do not make unrelated changes.
+
+=========================================================
+22. FINAL REPORT
+=========================================================
+
+When complete, report:
+
+A. Exact files created
+
+B. Exact files modified
+
+C. Dependencies added
+
+D. Screens implemented
+
+E. Navigation flow
+
+F. API endpoints integrated
+
+G. Mocked functionality
+
+H. What remains intentionally deferred to native Android
+
+I. npm build result
+
+J. Any warnings/errors
+
+K. Exact steps to run the project locally
+
+Do not claim Health Connect works in the browser.
+
+Do not claim background synchronization is implemented.
+
+Do not claim the Android application is complete.
+
+The final result of this phase should be a polished, functional SALUS Sync WEB PROTOTYPE that serves as the design and application-flow specification for the later native Android app.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-07-24T08:07:28+05:30.
+
+The user's current state is as follows:
+Active Document: f:\MedAI - IP\.gitignore (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- f:\MedAI - IP\.gitignore (LANGUAGE_UNSPECIFIED)
+- f:\MedAI - IP\backend\test_phase_6b.py (LANGUAGE_PYTHON)
+- f:\MedAI - IP\frontend\src\components\Sidebar.jsx (LANGUAGE_JAVASCRIPT)
+- f:\MedAI - IP\backend\.env (LANGUAGE_UNSPECIFIED)
+- f:\MedAI - IP\backend\migrate.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from None to Claude Sonnet 4.6 (Thinking). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE><USER_REQUEST>
+We are starting PHASE B of the existing SALUS Sync project.
+
+IMPORTANT CONTEXT
+
+This workspace is:
+
+F:\Salus-Sync
+
+It is an EXISTING React + Vite + TypeScript project.
+
+Phase A is already complete, tested, committed to GitHub, and tagged:
+
+v0.1.0-phase-a
+
+The Phase A application already has:
+
+- Splash screen
+- Patient login
+- JWT authentication
+- Dashboard
+- Health Data screen
+- Sync screen
+- Settings
+- Bottom navigation
+- MockHealthDataProvider
+- HealthDataProvider abstraction
+- Real FastAPI backend integration
+- Real authenticated health-sync API
+- Successful end-to-end synchronization to Supabase
+
+Backend:
+
+https://medai-ip.onrender.com
+
+Existing API endpoints:
+
+POST /api/auth/login
+
+GET /api/v1/health-sync/status
+
+POST /api/v1/health-sync
+
+GET /api/v1/health-metrics/latest
+
+GET /api/v1/health-metrics/history
+
+The Phase A pipeline has already been manually verified:
+
+React SALUS Sync
+→ Login
+→ JWT
+→ MockHealthDataProvider
+→ POST /api/v1/health-sync
+→ Render FastAPI
+→ Supabase
+
+Repeated synchronization was also verified not to create duplicate rows.
+
+=========================================================
+PHASE B STRATEGY
+=========================================================
+
+We are NOT rebuilding SALUS Sync using Jetpack Compose.
+
+We are converting the existing React/Vite application into a hybrid native Android application using Capacitor.
+
+Architecture:
+
+React/Vite SALUS Sync
+        ↓
+Capacitor
+        ↓
+Android application
+        ↓
+Future native Health Connect bridge
+        ↓
+Health Connect
+        ↓
+Existing FastAPI backend
+        ↓
+Supabase
+
+The existing React UI and application logic should be preserved as much as possible.
+
+=========================================================
+THIS TASK = PHASE B1 ONLY
+CAPACITOR AND ANDROID FOUNDATION
+=========================================================
+
+Do NOT implement Health Connect yet.
+
+Do NOT replace MockHealthDataProvider yet.
+
+Do NOT implement WorkManager/background synchronization yet.
+
+Do NOT redesign the UI.
+
+Do NOT modify the FastAPI backend.
+
+Do NOT modify Supabase.
+
+The goal of Phase B1 is ONLY:
+
+Take the existing working React/Vite SALUS Sync application and correctly package it as an Android application using Capacitor.
+
+=========================================================
+1. AUDIT FIRST
+=========================================================
+
+Before changing anything:
+
+Inspect:
+
+- package.json
+- vite.config.*
+- tsconfig files
+- current src structure
+- current build output configuration
+- authentication/localStorage implementation
+- API/backend URL configuration
+- routing implementation
+- HealthDataProvider abstraction
+
+Confirm the actual Vite build output directory.
+
+Do NOT assume it is "build".
+
+Vite normally outputs:
+
+dist
+
+Use the actual configured value.
+
+Do not make unrelated changes.
+
+=========================================================
+2. INSTALL CAPACITOR
+=========================================================
+
+Install the appropriate current stable Capacitor packages compatible with this project.
+
+At minimum:
+
+@capacitor/core
+@capacitor/cli
+@capacitor/android
+
+Initialize Capacitor.
+
+Use:
+
+App Name:
+
+SALUS Sync
+
+App ID / Package ID:
+
+com.salus.sync
+
+IMPORTANT:
+
+Do not create a second React project.
+
+Do not create a nested SALUS Sync project.
+
+Capacitor must be integrated directly into the existing:
+
+F:\Salus-Sync
+
+repository.
+
+=========================================================
+3. CAPACITOR CONFIGURATION
+=========================================================
+
+Create/configure:
+
+capacitor.config.ts
+
+Use:
+
+appId:
+com.salus.sync
+
+appName:
+SALUS Sync
+
+webDir:
+
+Use the ACTUAL Vite production build directory.
+
+Expected:
+
+dist
+
+Do not configure a development server URL as the permanent production source.
+
+The Android app must ultimately load bundled production assets from the Capacitor WebView.
+
+Keep configuration clean and minimal.
+
+=========================================================
+4. BUILD WEB APPLICATION
+=========================================================
+
+Run:
+
+npm run build
+
+Verify the existing Phase A application still builds with:
+
+- Zero TypeScript errors
+- Zero Vite build errors
+
+Do not proceed with a broken web build.
+
+=========================================================
+5. ADD ANDROID PLATFORM
+=========================================================
+
+Add the Android Capacitor platform.
+
+This should generate:
+
+F:\Salus-Sync\android
+
+The Android project MUST remain inside the existing Git repository.
+
+Expected structure:
+
+F:\Salus-Sync\
+├── src\
+├── public\
+├── dist\
+├── package.json
+├── capacitor.config.ts
+└── android\
+    ├── app\
+    ├── gradle\
+    └── ...
+
+Do NOT initialize another Git repository inside:
+
+android/
+
+If an accidental nested .git directory is created, stop and report it rather than silently modifying Git history.
+
+=========================================================
+6. ANDROID APPLICATION ID
+=========================================================
+
+Verify the generated Android application uses:
+
+com.salus.sync
+
+Verify the visible app name is:
+
+SALUS Sync
+
+Do not rename the existing web application.
+
+=========================================================
+7. INTERNET ACCESS
+=========================================================
+
+SALUS Sync communicates with:
+
+https://medai-ip.onrender.com
+
+Verify AndroidManifest.xml has the required INTERNET permission.
+
+Do NOT enable cleartext HTTP globally unless required later for explicit local-development testing.
+
+Production communication uses HTTPS.
+
+Do not weaken Android network security unnecessarily.
+
+=========================================================
+8. EXISTING AUTHENTICATION
+=========================================================
+
+Do NOT rewrite authentication in Phase B1.
+
+Preserve the existing:
+
+POST /api/auth/login
+
+JWT handling
+
+patient-only validation
+
+API client
+
+backend URL configuration
+
+localStorage session persistence
+
+For this initial Capacitor phase, localStorage may continue to be used.
+
+Secure native credential/token storage will be evaluated in a later Phase B sub-phase.
+
+Do NOT log:
+
+- passwords
+- JWT tokens
+- credentials
+
+=========================================================
+9. EXISTING API INTEGRATION
+=========================================================
+
+Preserve all existing API behavior.
+
+The Android WebView must continue using:
+
+https://medai-ip.onrender.com
+
+Do not create a duplicate API implementation in Kotlin.
+
+The React API layer remains responsible for HTTP requests during this phase.
+
+Existing endpoints:
+
+POST /api/auth/login
+
+GET /api/v1/health-sync/status
+
+POST /api/v1/health-sync
+
+GET /api/v1/health-metrics/latest
+
+GET /api/v1/health-metrics/history
+
+Do not change their contracts.
+
+=========================================================
+10. MOCK HEALTH DATA
+=========================================================
+
+KEEP:
+
+HealthDataProvider
+        ↑
+MockHealthDataProvider
+
+exactly as the active provider for Phase B1.
+
+The current mock device is:
+
+HONOR Band 6
+
+Do NOT change it back to HONOR Band 7.
+
+The mock source must remain clearly identified as Phase A/development mock data.
+
+Do not claim this is real Health Connect data.
+
+=========================================================
+11. ROUTING / CAPACITOR COMPATIBILITY
+=========================================================
+
+Audit React Router behavior inside a Capacitor WebView.
+
+Ensure application routing works correctly when loaded from bundled Capacitor assets.
+
+Test or inspect:
+
+Splash
+
+Login
+
+/dashboard/home
+
+/dashboard/health
+
+/dashboard/sync
+
+/dashboard/settings
+
+Do not introduce unnecessary routing rewrites unless required for Capacitor compatibility.
+
+If BrowserRouter creates a real packaged-app routing issue, explain the issue before changing routing strategy.
+
+Do not blindly switch routers without evidence.
+
+=========================================================
+12. SAFE AREA / MOBILE VIEWPORT
+=========================================================
+
+The existing UI is already mobile-first.
+
+Do NOT redesign it.
+
+Only make minimal compatibility adjustments if necessary for:
+
+- Android status bar
+- display cutouts/notches
+- bottom navigation
+- Android gesture navigation area
+- safe-area insets
+- keyboard opening on Login
+- WebView viewport sizing
+
+Preserve the existing SALUS design.
+
+Do not make visual changes unless required for native Android compatibility.
+
+=========================================================
+13. CAPACITOR SYNC WORKFLOW
+=========================================================
+
+Set up and verify the standard development workflow.
+
+Expected workflow:
+
+npm run build
+
+npx cap sync android
+
+Then Android project can be opened/run.
+
+If useful, add safe package.json scripts such as:
+
+"android:sync"
+"android:open"
+
+but do not remove or break existing scripts.
+
+Do not add unnecessary scripts.
+
+=========================================================
+14. ANDROID BUILD VALIDATION
+=========================================================
+
+After generating Android:
+
+Run the strongest validation available in the current environment.
+
+At minimum:
+
+npm run build
+
+npx cap sync android
+
+If Gradle/Android SDK is available, also run an Android debug build such as:
+
+gradlew assembleDebug
+
+Use the correct Windows command/path.
+
+If Android SDK or Java configuration prevents building, report the exact blocker instead of pretending the Android build succeeded.
+
+=========================================================
+15. DO NOT IMPLEMENT HEALTH CONNECT YET
+=========================================================
+
+This is critical.
+
+Do NOT yet:
+
+- Add Health Connect permissions
+- Add Health Connect SDK logic
+- Read Heart Rate
+- Read Steps
+- Read SpO2
+- Read Sleep
+- Create HealthConnectDataProvider
+- Create a custom Capacitor Health Connect plugin
+- Install an unverified third-party Health Connect plugin
+- Add WorkManager
+- Add background sync
+
+Those belong to later Phase B steps.
+
+We first need to prove:
+
+Existing React App
+        ↓
+Capacitor
+        ↓
+Android App
+        ↓
+Existing login/UI/API/mock sync still works
+
+Only after that succeeds will we replace MockHealthDataProvider with real Health Connect.
+
+=========================================================
+16. DO NOT DELETE PHASE A
+=========================================================
+
+Do NOT remove:
+
+src/
+public/
+package.json
+existing React pages
+existing provider abstraction
+existing API layer
+
+The React application IS the UI layer of the Capacitor Android app.
+
+Do not move Phase A into another folder.
+
+Do not create:
+
+web/
+frontend/
+react-app/
+
+or any unnecessary duplicate structure.
+
+Keep the existing repository architecture and add:
+
+android/
+
+through Capacitor.
+
+=========================================================
+17. GIT SAFETY
+=========================================================
+
+The repository already has a known-good tag:
+
+v0.1.0-phase-a
+
+Do not:
+
+- rewrite Git history
+- delete tags
+- force push
+- create nested repositories
+- automatically commit
+- automatically push
+
+Only modify files required for Phase B1.
+
+I will review and commit manually after testing.
+
+Ensure generated Android build artifacts that should not be version-controlled are correctly ignored.
+
+Do not accidentally ignore required Android source/project files.
+
+=========================================================
+18. EXPECTED RESULT
+=========================================================
+
+At the end of Phase B1, the project should conceptually be:
+
+F:\Salus-Sync\
+
+React/Vite UI
+        +
+Capacitor
+        +
+Generated Android project
+
+with:
+
+SALUS Sync Android App
+        ↓
+Existing React UI
+        ↓
+Existing JWT login
+        ↓
+Existing Render backend
+        ↓
+MockHealthDataProvider still active
+        ↓
+Existing Sync API
+        ↓
+Supabase
+
+No real Health Connect integration yet.
+
+=========================================================
+19. MANUAL TEST CHECKLIST TO PROVIDE
+=========================================================
+
+After implementation, provide a short manual Android test checklist covering:
+
+1. App installs/launches.
+2. Splash displays.
+3. Login screen displays correctly.
+4. Keyboard/input works.
+5. Login with real SALUS patient credentials succeeds.
+6. Dashboard renders correctly.
+7. Bottom navigation works.
+8. Health screen renders mock data.
+9. Settings shows correct account/backend.
+10. Test Connection reaches Render.
+11. Sync Now uploads mock data successfully.
+12. App restart preserves expected session behavior.
+13. No horizontal overflow or content hidden behind Android system bars.
+14. No obvious WebView/network errors.
+
+Do NOT claim these manual tests passed unless they were actually executed.
+
+=========================================================
+20. FINAL REPORT
+=========================================================
+
+When finished, report:
+
+A. Existing project audit findings
+
+B. Exact npm packages added and versions
+
+C. Exact files created
+
+D. Exact files modified
+
+E. capacitor.config.ts configuration
+
+F. Android package/application ID
+
+G. Android project path
+
+H. INTERNET permission status
+
+I. Routing compatibility findings
+
+J. Any safe-area/mobile compatibility changes
+
+K. npm run build exact result
+
+L. npx cap sync android exact result
+
+M. Android/Gradle build result, if executable
+
+N. Any warnings/errors/blockers
+
+O. Manual test checklist
+
+P. Exact commands I should use during future development after React changes
+
+IMPORTANT:
+
+Do not proceed beyond Phase B1.
+
+Do not implement Health Connect yet.
+
+The objective is to establish a stable Capacitor Android foundation while preserving the already validated Phase A application.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-07-24T09:51:47+05:30.
+
+The user's current state is as follows:
+Active Document: f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Cursor is on line: 1
+Other open documents:
+- f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Running terminal commands:
+- npm run dev (in f:\Salus-Sync, running for 1h11m51s)
+</ADDITIONAL_METADATA><USER_REQUEST>
+We have successfully completed and physically tested SALUS Sync Phase B1.
+
+CURRENT VERIFIED STATE
+----------------------
+Phase A:
+- React + Vite + TypeScript SALUS Sync web application is working.
+- Existing authentication, dashboard, health, sync, and settings flows work.
+- MockHealthDataProvider currently supplies:
+  - Heart Rate
+  - Steps
+  - SpO2 / Blood Oxygen
+  - Sleep
+- Syncing these records to the existing backend/Supabase already works.
+
+Phase B1:
+- Existing React/Vite app packaged as Android using Capacitor.
+- Android project exists inside the same repository at:
+  F:\Salus-Sync\android
+- App ID:
+  com.salus.sync
+- Capacitor Android app successfully builds.
+- Physical Android installation and testing passed.
+- Real patient login works from the physical phone.
+- Render backend communication works.
+- Capacitor Android origin is https://localhost.
+- Backend CORS has already been updated accordingly.
+- Current Android/Gradle environment is stable and MUST NOT be unnecessarily changed.
+- Mock data still works correctly in the Android app.
+- Phase B1 is a known-good stable checkpoint.
+
+PHASE B2 GOAL
+-------------
+Prepare the architecture for REAL Android Health Connect integration.
+
+The intended future data flow is approximately:
+
+HONOR Band 6
+→ health ecosystem/app available on the Android phone
+→ Android Health Connect
+→ SALUS Sync native Android layer
+→ Capacitor bridge
+→ existing React application
+→ existing SALUS backend
+→ Supabase health_metrics
+
+The goal is to eventually replace the mock health-data source during real Android operation with actual Health Connect data while preserving the existing working application architecture.
+
+IMPORTANT:
+THIS TASK IS AUDIT + IMPLEMENTATION PLAN ONLY.
+
+DO NOT MODIFY ANY FILES.
+DO NOT INSTALL PACKAGES.
+DO NOT RUN MIGRATIONS.
+DO NOT CHANGE GRADLE.
+DO NOT ADD HEALTH CONNECT DEPENDENCIES YET.
+DO NOT IMPLEMENT A CAPACITOR PLUGIN YET.
+DO NOT REMOVE MockHealthDataProvider.
+DO NOT CHANGE THE BACKEND OR DATABASE.
+
+First inspect the complete current repository and produce a technically precise Phase B2 implementation plan.
+
+AUDIT REQUIREMENTS
+------------------
+
+1. CURRENT HEALTH DATA ARCHITECTURE
+
+Inspect and document:
+
+- How MockHealthDataProvider currently works.
+- Its interface/types.
+- Where it is instantiated or selected.
+- Which React components/services consume it.
+- How the four health metrics are represented internally.
+- How data flows from provider → UI → sync/API.
+- Whether the existing abstraction is sufficient to add a second provider such as:
+  HealthConnectDataProvider.
+
+Identify exactly which existing files participate in this flow.
+
+2. CAPACITOR ARCHITECTURE
+
+Inspect:
+
+- capacitor.config.ts
+- package.json
+- android/
+- MainActivity
+- AndroidManifest.xml
+- Gradle files
+- Capacitor versions
+- Android compileSdk / targetSdk / minSdk
+- Java/Kotlin configuration
+
+Determine the safest way to expose native Health Connect functionality to the React/TypeScript layer.
+
+Compare at least:
+
+A. A local custom Capacitor plugin implemented inside this repository.
+
+B. A maintained third-party Capacitor Health Connect plugin, if one is technically appropriate.
+
+C. Direct native integration through MainActivity or another Android bridge.
+
+Recommend ONE approach for this project and explain why.
+
+Do not install anything during this audit.
+
+3. HEALTH CONNECT COMPATIBILITY
+
+Determine what will be required for Android Health Connect integration with the project's CURRENT Android configuration.
+
+Audit compatibility for:
+
+- Android versions supported
+- Health Connect availability detection
+- Android 14+ integrated Health Connect behavior
+- Older Android versions where Health Connect may require a separate app
+- Current compileSdk / targetSdk / minSdk
+- Required AndroidX Health Connect dependency
+- Required manifest entries
+- Required permissions
+- Any package visibility requirements
+- Any Activity/result handling requirements
+- Any ProGuard/R8 concerns
+
+Do not blindly upgrade Gradle, AGP, Java, Kotlin, Capacitor, compileSdk, or targetSdk.
+
+The Phase B1 Android environment is currently BUILD SUCCESSFUL and stable.
+
+Only recommend version changes if absolutely required, with a specific reason.
+
+4. HEALTH DATA TYPES
+
+We currently use these four metrics:
+
+- HEART_RATE
+- STEPS
+- SPO2
+- SLEEP
+
+Map each existing SALUS metric to the appropriate Android Health Connect record type(s).
+
+For each metric explain:
+
+- Health Connect record type
+- Permission required
+- Unit returned by Health Connect
+- How it maps to the existing SALUS health metric model
+- Whether aggregation or transformation is required
+- Appropriate time range/query strategy
+
+Pay special attention to Sleep because it may involve sessions/stages rather than a single numeric record.
+
+Do NOT redesign the backend schema unless there is a demonstrated incompatibility.
+
+5. PERMISSION FLOW
+
+Design the complete permission lifecycle.
+
+The app should eventually:
+
+1. Detect whether Health Connect is available.
+2. Determine whether required permissions are granted.
+3. Request only required permissions.
+4. Handle denied permissions safely.
+5. Handle partial permission grants if applicable.
+6. Allow the user to retry/open appropriate Health Connect settings.
+7. Never crash if Health Connect is unavailable.
+
+Identify all required read permissions for:
+
+- Heart Rate
+- Steps
+- Oxygen Saturation
+- Sleep
+
+Also identify any Android manifest declarations required.
+
+6. HONOR BAND 6 REALITY CHECK
+
+This is critical.
+
+Do NOT assume that because the user owns an HONOR Band 6, its data automatically appears in Health Connect.
+
+Analyze the expected real-world data path.
+
+Determine what must be true for:
+
+HONOR Band 6
+→ phone health application
+→ Health Connect
+→ SALUS Sync
+
+Clearly distinguish:
+
+- Data directly readable from the wearable
+versus
+- Data written into Health Connect by another health application.
+
+Determine whether SALUS Sync should integrate only with Health Connect rather than directly with the wearable.
+
+Identify any dependency on HONOR Health / Huawei Health / Health Sync / another intermediary, if applicable.
+
+If this cannot be confirmed purely from repository inspection, explicitly mark it as a real-device validation requirement rather than making assumptions.
+
+7. PROVIDER ARCHITECTURE
+
+Design how to preserve:
+
+MockHealthDataProvider
+
+and introduce something like:
+
+HealthConnectDataProvider
+
+Both should ideally satisfy the same abstraction/interface so the rest of the UI and backend synchronization logic does not need major rewrites.
+
+Recommend how provider selection should work.
+
+For example:
+
+Web development
+→ MockHealthDataProvider
+
+Android + Health Connect available + permissions granted
+→ HealthConnectDataProvider
+
+Android but Health Connect unavailable/not authorized
+→ graceful unavailable/permission state
+
+Do NOT silently fall back to fake mock data in production in a way that could make users believe mock records are real health records.
+
+Design an explicit and safe fallback/testing strategy.
+
+8. CAPACITOR BRIDGE API
+
+Design the proposed TypeScript/native API before implementing it.
+
+For example, evaluate methods conceptually such as:
+
+checkAvailability()
+checkPermissions()
+requestPermissions()
+readHeartRate(...)
+readSteps(...)
+readSpO2(...)
+readSleep(...)
+openHealthConnectSettings()
+
+Or determine whether a more generic API is cleaner.
+
+Specify:
+
+- TypeScript interfaces
+- Native method responsibilities
+- Expected return shapes
+- Error handling
+- Timestamp handling
+- Units
+- Source/device metadata
+
+Do not implement yet.
+
+9. DATA NORMALIZATION
+
+Compare actual Health Connect data structures against the existing backend payload expected by SALUS.
+
+Determine how real records should map into existing fields such as:
+
+- metric_type
+- value
+- unit
+- start_time
+- end_time
+- source
+- device_name
+- synced_at
+
+Identify any mismatch before implementation.
+
+Preserve the existing backend contract wherever reasonably possible.
+
+10. DUPLICATE / IDEMPOTENT SYNC STRATEGY
+
+The existing app must not create uncontrolled duplicate records every time Health Connect is read.
+
+Analyze how Phase A currently handles sync.
+
+Design how real Health Connect records should be uniquely identified or deduplicated.
+
+Consider:
+
+- Health Connect record IDs / metadata IDs
+- start/end timestamps
+- metric type
+- source/origin
+- repeated sync windows
+
+Recommend an idempotent strategy compatible with the existing backend/database architecture.
+
+Do not modify the database during this audit.
+
+11. BACKGROUND SYNC — PLAN ONLY
+
+Phase B2 should first focus on foreground/manual Health Connect reading.
+
+However, explain how the chosen architecture could later support:
+
+- periodic background synchronization
+- Android WorkManager
+- Health Connect background-read permissions where applicable
+
+Do NOT implement background sync yet.
+
+Clearly separate:
+
+Phase B2 foreground integration
+
+from
+
+future background sync phase.
+
+12. SECURITY / PRIVACY
+
+Identify considerations for:
+
+- Health permissions
+- sensitive health data
+- JWT/localStorage in Capacitor
+- logging
+- avoiding health data leakage in console/logcat
+- permission revocation
+- minimum necessary permissions
+
+Do not introduce unrelated security refactors during B2.
+
+13. PROPOSED IMPLEMENTATION PHASES
+
+Break Phase B2 into small safe sub-phases.
+
+Suggested structure:
+
+B2.1
+Native Health Connect foundation + availability detection
+
+B2.2
+Permission flow
+
+B2.3
+Read real health records
+
+B2.4
+HealthConnectDataProvider integration
+
+B2.5
+UI states/error handling
+
+B2.6
+Backend synchronization + deduplication validation
+
+B2.7
+Physical-device testing
+
+Adjust this structure if the repository architecture suggests something better.
+
+For every sub-phase specify:
+
+- exact files expected to be created
+- exact files expected to be modified
+- dependencies required
+- verification steps
+- rollback risks
+
+14. TEST PLAN
+
+Create a detailed manual physical-device test checklist covering:
+
+- Health Connect unavailable
+- Health Connect available
+- permissions not granted
+- permission request
+- permission denied
+- partial/no data
+- real data available
+- heart rate
+- steps
+- SpO2
+- sleep
+- source/device metadata
+- backend sync
+- Supabase verification
+- repeated sync / duplicate prevention
+- app restart
+- permission revocation
+- offline/network failure
+
+Also identify which tests can be automated.
+
+FINAL REPORT FORMAT
+-------------------
+
+Return:
+
+A. Current architecture findings
+
+B. Exact files involved in existing health-data flow
+
+C. Current Android/Capacitor compatibility findings
+
+D. Recommended Health Connect integration approach and why
+
+E. Required dependencies — PLAN ONLY
+
+F. Required Android permissions/manifest changes — PLAN ONLY
+
+G. Mapping table:
+SALUS metric → Health Connect record → permission → unit → transformation
+
+H. Proposed Capacitor/native bridge API
+
+I. Proposed HealthConnectDataProvider architecture
+
+J. HONOR Band 6 → Health Connect real-world data-path analysis and assumptions requiring validation
+
+K. Data normalization findings
+
+L. Duplicate/idempotency strategy
+
+M. Exact B2 sub-phase implementation plan
+
+N. Files expected to be created/modified per sub-phase
+
+O. Risks/blockers/open questions
+
+P. Physical-device testing checklist
+
+Q. Clear GO / NO-GO recommendation for starting B2.1
+
+STRICT RULE:
+Do not modify any code during this task.
+
+This is an architecture audit and implementation-plan task only.
+
+If any assumption cannot be verified from the repository, explicitly label it:
+"REQUIRES REAL-DEVICE / EXTERNAL VALIDATION"
+
+Do not invent compatibility claims.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-07-24T19:20:10+05:30.
+
+The user's current state is as follows:
+Active Document: f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Cursor is on line: 4
+Other open documents:
+- f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Running terminal commands:
+- npm run dev (in f:\Salus-Sync, running for 10h40m14s)
+</ADDITIONAL_METADATA><USER_REQUEST>
+Proceed with Phase B2.1 ONLY: Health Connect Foundation + Availability Detection.
+
+Phase A and Phase B1 are stable checkpoints and MUST remain functional.
+
+IMPORTANT:
+Do not implement the full Health Connect integration yet.
+Do not implement health-data reading yet.
+Do not implement backend synchronization yet.
+Do not implement background sync yet.
+Do not modify the existing MockHealthDataProvider behavior yet.
+Do not modify Dashboard/Health/Sync UI consumers yet.
+Do not make unrelated Gradle/AGP/Capacitor/Kotlin/Java upgrades.
+
+Before making changes, re-audit the exact current files because Phase B1 contains deliberate Android build compatibility fixes.
+
+PHASE B2.1 OBJECTIVE
+--------------------
+
+Add the minimum native Android Health Connect foundation required to:
+
+1. Include the official AndroidX Health Connect SDK.
+2. Detect whether Health Connect is available.
+3. Expose that availability check to React/TypeScript through a local Capacitor plugin.
+4. Preserve the existing application behavior.
+5. Keep the Android project BUILD SUCCESSFUL.
+6. Test the availability bridge on the physical Android phone.
+
+IMPORTANT CORRECTIONS TO THE PREVIOUS PLAN
+------------------------------------------
+
+1. Do NOT use the previously proposed old dependency:
+
+androidx.health.connect:connect-client:1.1.0-alpha07
+
+Health Connect 1.1.0 has a stable release.
+
+Use a stable Health Connect SDK version compatible with the existing project unless there is a verified technical reason not to.
+
+Prefer:
+
+androidx.health.connect:connect-client:1.1.0
+
+Do not use an alpha version merely because it appeared in the earlier plan.
+
+2. Current minSdkVersion is 22.
+
+The Health Connect SDK requires API 26+.
+
+For B2.1, determine whether the official dependency itself requires minSdk >= 26 at build time.
+
+If yes, make the minimum required change:
+
+minSdkVersion 22 → 26
+
+Do NOT raise it to 28 unless technically required.
+
+Health Connect runtime availability must still be checked because the Health Connect provider/app availability differs by Android version.
+
+Document the exact reason if minSdk is changed.
+
+3. Do NOT implement the previously suggested simplistic deduplication strategy based only on:
+
+record start_time > last_sync
+
+That is NOT part of B2.1.
+
+Future B2.5 must preserve and evaluate:
+
+- Health Connect metadata.id
+- metadata.lastModifiedTime
+- dataOrigin
+- Health Connect Changes tokens where appropriate
+
+A health record may be inserted into Health Connect later even if its measurement timestamp is older.
+
+Do not implement sync/deduplication in B2.1.
+
+4. Do NOT assume:
+
+metadata.device.model == HONOR Band 6
+
+Device metadata may be absent or may represent the writing source differently depending on the HONOR Health / Health Sync / Health Connect pipeline.
+
+No device-name assumptions should be hardcoded.
+
+IMPLEMENTATION REQUIREMENTS
+---------------------------
+
+A. HEALTH CONNECT DEPENDENCY
+
+Add only the official AndroidX Health Connect dependency required for this phase.
+
+Use the stable compatible version.
+
+Do not add third-party NPM Health Connect packages.
+
+Do not upgrade:
+
+- Capacitor
+- Android Gradle Plugin
+- Gradle wrapper
+- Java
+- Kotlin
+- compileSdk
+- targetSdk
+
+unless compilation proves an upgrade is absolutely required.
+
+The current known-good environment includes deliberate Phase B1 fixes and must remain stable.
+
+B. MIN SDK
+
+Verify whether Health Connect dependency requires minSdk 26.
+
+If required:
+
+Change only:
+
+minSdkVersion 22 → 26
+
+in the correct existing configuration file.
+
+Document:
+
+- previous value
+- new value
+- reason
+
+Do not raise minSdk beyond the minimum required value.
+
+C. LOCAL CAPACITOR PLUGIN
+
+Create a local native plugin:
+
+HealthConnectPlugin.java
+
+inside the existing Android application package:
+
+com.salus.sync
+
+Use the official Capacitor plugin APIs appropriate for the currently installed Capacitor version.
+
+For B2.1 implement ONLY:
+
+checkAvailability()
+
+Do not implement permissions or record reads yet.
+
+The native method should use the official Health Connect SDK availability API rather than manually guessing based only on Android version or installed package.
+
+Return a clean normalized result to TypeScript.
+
+Recommended result contract:
+
+{
+  status:
+    "AVAILABLE"
+    | "PROVIDER_UPDATE_REQUIRED"
+    | "UNAVAILABLE"
+}
+
+If useful, additional safe diagnostic fields may be returned, but keep the public contract simple.
+
+Map the official Health Connect SDK statuses correctly.
+
+Do not throw an uncaught exception if Health Connect is unavailable.
+
+D. CAPACITOR REGISTRATION
+
+Inspect the existing MainActivity.java.
+
+Register the local HealthConnectPlugin using the correct mechanism for the currently installed Capacitor version.
+
+Do not disturb existing Capacitor behavior.
+
+E. TYPESCRIPT BRIDGE
+
+Create:
+
+src/plugins/HealthConnect.ts
+
+Define the minimum Phase B2.1 interface.
+
+Example conceptually:
+
+export type HealthConnectAvailability =
+  | 'AVAILABLE'
+  | 'PROVIDER_UPDATE_REQUIRED'
+  | 'UNAVAILABLE';
+
+export interface HealthConnectPlugin {
+  checkAvailability(): Promise<{
+    status: HealthConnectAvailability;
+  }>;
+}
+
+Register:
+
+HealthConnect
+
+using Capacitor registerPlugin.
+
+Do not create HealthConnectDataProvider yet unless strictly necessary.
+
+That belongs to a later B2 phase.
+
+F. MANIFEST
+
+Add only manifest entries genuinely required for Health Connect availability/provider discovery in B2.1.
+
+If package visibility is required for older Android Health Connect provider discovery, add the appropriate <queries> entry.
+
+Do NOT add the four health-data permissions yet unless they are technically required for availability detection.
+
+Permissions belong primarily to B2.2.
+
+Do not create a PermissionsRationaleActivity yet unless required by B2.1.
+
+Keep this phase minimal.
+
+G. TEMPORARY DEVELOPMENT DIAGNOSTIC
+
+We need a safe way to verify the native bridge before integrating it into the actual application UI.
+
+Add a minimal TEMPORARY development-only diagnostic mechanism.
+
+Preferred options, in order:
+
+1. A console diagnostic callable during development, or
+2. A minimal temporary test invocation that logs:
+
+[HealthConnect] Availability: AVAILABLE
+
+or the corresponding status.
+
+Do NOT redesign the production UI.
+
+Do NOT show mock health data as real Health Connect data.
+
+Do not log sensitive health information.
+
+B2.1 only checks availability, so no health records should be logged.
+
+H. BUILD VALIDATION
+
+After implementation run:
+
+npm run build
+
+npx cap sync android
+
+Then from android/:
+
+.\gradlew.bat clean assembleDebug
+
+All must succeed.
+
+Do not stop after npm build.
+
+Confirm the APK exists at the expected debug APK path.
+
+I. REGRESSION SAFETY
+
+Verify that Phase A/B1 behavior was not broken.
+
+Specifically ensure:
+
+- React build succeeds.
+- Capacitor sync succeeds.
+- Android native build succeeds.
+- Existing login flow remains untouched.
+- Existing API URL remains untouched.
+- Existing CORS behavior remains untouched.
+- MockHealthDataProvider remains intact.
+- Existing backend sync logic remains untouched.
+- No database changes.
+- No backend changes.
+
+J. PHYSICAL PHONE TEST INSTRUCTIONS
+
+At the end, provide exact commands to reinstall the new debug APK using the existing adb path used on this machine.
+
+Provide instructions for verifying Health Connect availability on the connected physical phone.
+
+Explain what each result means:
+
+AVAILABLE
+
+PROVIDER_UPDATE_REQUIRED
+
+UNAVAILABLE
+
+Also tell me how to inspect the native/WebView diagnostic using:
+
+chrome://inspect/#devices
+
+if needed.
+
+K. HONOR BAND
+
+Do NOT attempt HONOR Band integration during B2.1.
+
+Do not install or configure Health Sync automatically.
+
+Simply retain this blocker:
+
+REQUIRES REAL-DEVICE / EXTERNAL VALIDATION:
+
+HONOR Band 6
+→ HONOR Health / Huawei Health
+→ possible intermediary
+→ Health Connect
+
+B2.1 only proves:
+
+SALUS Sync
+↔ Android Health Connect availability
+
+FINAL REPORT
+------------
+
+Return:
+
+A. Exact files changed
+
+B. Exact files created
+
+C. Health Connect SDK version selected and why
+
+D. minSdk before/after and why
+
+E. Manifest changes
+
+F. Native plugin implementation summary
+
+G. Capacitor registration method
+
+H. TypeScript bridge contract
+
+I. npm run build result
+
+J. npx cap sync android result
+
+K. Gradle clean assembleDebug result
+
+L. APK output path
+
+M. Exact physical-phone installation command
+
+N. Exact method to verify checkAvailability()
+
+O. Any warnings encountered
+
+P. Confirmation that Phase A/B1 behavior was not modified
+
+Q. GO / NO-GO recommendation for B2.2 Permissions
+
+STRICT SCOPE RULE
+-----------------
+
+This task is Phase B2.1 ONLY.
+
+Do not implement:
+
+- Health Connect permission requests
+- Heart-rate reading
+- Step reading
+- SpO2 reading
+- Sleep reading
+- HealthConnectDataProvider
+- Provider switching
+- Backend synchronization changes
+- Deduplication
+- Changes tokens
+- Background sync
+- WorkManager
+- HONOR-specific integration
+- UI redesign
+
+If an unexpected compatibility problem occurs, STOP and report the exact error before making broad dependency or build-system upgrades.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-07-24T19:24:47+05:30.
+
+The user's current state is as follows:
+Active Document: f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Cursor is on line: 4
+Other open documents:
+- f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Running terminal commands:
+- npm run dev (in f:\Salus-Sync, running for 10h44m51s)
+</ADDITIONAL_METADATA><USER_REQUEST>
+Implement Phase B2.2 of SALUS Sync: Android Health Connect Permission Flow.
+
+IMPORTANT CONTEXT
+=================
+
+Phase A, Phase B1, and Phase B2.1 are complete and currently stable.
+
+DO NOT redesign, refactor, upgrade, or destabilize the existing working architecture.
+
+Current verified environment:
+
+- React + Vite frontend
+- Capacitor 6 Android application
+- Package: com.salus.sync
+- Gradle Wrapper: 8.7
+- Android Gradle Plugin: 8.2.1
+- Java/JDK: 21
+- compileSdkVersion: 35
+- targetSdkVersion: 35
+- minSdkVersion: 26
+- Health Connect dependency:
+  androidx.health.connect:connect-client:1.1.0-alpha12
+
+DO NOT upgrade:
+- Gradle
+- Android Gradle Plugin
+- compileSdk
+- targetSdk
+- Java
+- Kotlin
+- Capacitor
+- Health Connect dependency
+
+The current combination has been physically tested and builds successfully.
+
+B2.1 IS VERIFIED PASSING ON A PHYSICAL ANDROID PHONE.
+
+Chrome Remote DevTools showed:
+
+[HealthConnect] Starting availability check
+[HealthConnect] Availability: AVAILABLE
+
+This confirms:
+
+React/TypeScript
+    ↓
+Capacitor bridge
+    ↓
+HealthConnectPlugin.java
+    ↓
+Android Health Connect
+    ↓
+Result returned successfully to JavaScript
+
+Existing B2.1 files include:
+
+android/app/src/main/java/com/salus/sync/HealthConnectPlugin.java
+src/plugins/HealthConnect.ts
+
+HealthConnectPlugin is explicitly registered in MainActivity.java BEFORE:
+
+super.onCreate(savedInstanceState);
+
+Do not break or remove this working registration.
+
+==================================================
+PHASE B2.2 OBJECTIVE
+==================================================
+
+Implement ONLY the Health Connect permission flow.
+
+Do NOT read actual health records yet.
+
+Actual Health Connect data reading belongs to Phase B2.3.
+
+B2.2 must support read permissions for exactly these SALUS metrics:
+
+1. Heart Rate
+2. Steps
+3. Blood Oxygen / SpO2
+4. Sleep
+
+The native Android implementation must request the corresponding Health Connect READ permissions.
+
+No WRITE permissions are required.
+
+SALUS Sync is currently a read-only consumer of health data.
+
+==================================================
+STEP 1 — AUDIT BEFORE MODIFYING
+==================================================
+
+Before making changes, inspect:
+
+- HealthConnectPlugin.java
+- MainActivity.java
+- AndroidManifest.xml
+- android/app/build.gradle
+- variables.gradle
+- src/plugins/HealthConnect.ts
+- src/main.tsx
+- existing Capacitor configuration
+
+Confirm the exact APIs available in:
+
+androidx.health.connect:connect-client:1.1.0-alpha12
+
+Do NOT blindly copy code written for Health Connect 1.1.0 stable because the project intentionally uses alpha12 for compatibility with compileSdk 35 / AGP 8.2.1.
+
+Adapt implementation to the APIs actually available in alpha12.
+
+==================================================
+STEP 2 — HEALTH CONNECT PERMISSIONS
+==================================================
+
+Implement read permissions for:
+
+HeartRateRecord
+StepsRecord
+OxygenSaturationRecord
+SleepSessionRecord
+
+Use Health Connect's official permission mechanism for the installed alpha12 SDK.
+
+Conceptually, the required permission set should correspond to:
+
+HealthPermission.getReadPermission(HeartRateRecord.class)
+HealthPermission.getReadPermission(StepsRecord.class)
+HealthPermission.getReadPermission(OxygenSaturationRecord.class)
+HealthPermission.getReadPermission(SleepSessionRecord.class)
+
+Verify the exact Java API syntax against the dependency version before implementation.
+
+Do not request unrelated health permissions.
+
+Do not request WRITE permissions.
+
+==================================================
+STEP 3 — NATIVE PLUGIN METHODS
+==================================================
+
+Extend the existing HealthConnectPlugin.java.
+
+Preserve:
+
+checkAvailability()
+
+Add:
+
+checkPermissions()
+
+requestPermissions()
+
+Expected Capacitor API behavior:
+
+checkPermissions():
+
+Returns something equivalent to:
+
+{
+  "granted": true/false,
+  "permissions": {
+    "heartRate": true/false,
+    "steps": true/false,
+    "spo2": true/false,
+    "sleep": true/false
+  }
+}
+
+Prefer returning individual permission states in addition to the overall boolean.
+
+"granted" should only be true if ALL four required read permissions are granted.
+
+requestPermissions():
+
+Launch the official Android Health Connect permission UI.
+
+After the user completes or cancels the permission screen, return the ACTUAL resulting permission state.
+
+Do NOT assume permissions were granted merely because the activity returned successfully.
+
+Re-query Health Connect's granted permissions after the result.
+
+Return the same structured permission result as checkPermissions().
+
+==================================================
+STEP 4 — CAPACITOR ACTIVITY RESULT HANDLING
+==================================================
+
+Implement the permission request using the correct Capacitor 6 native plugin lifecycle.
+
+Do not use deprecated or fragile activity-result handling if Capacitor provides an appropriate mechanism.
+
+Ensure:
+
+- Promise resolves after user interaction.
+- Permission denial does not crash.
+- Partial permission grant is handled correctly.
+- Canceling the permission screen is handled correctly.
+- Repeated calls are safe.
+- No unresolved PluginCall remains.
+- Activity recreation does not cause obvious crashes.
+
+Do not modify MainActivity registration unless absolutely necessary.
+
+B2.1 plugin registration is already working.
+
+==================================================
+STEP 5 — ANDROID MANIFEST
+==================================================
+
+Audit AndroidManifest.xml.
+
+Add ONLY the Health Connect read permissions required for:
+
+- Heart Rate
+- Steps
+- Oxygen Saturation
+- Sleep
+
+Use the correct Android Health Connect permission names supported by the current SDK/platform.
+
+Expected permissions conceptually include:
+
+android.permission.health.READ_HEART_RATE
+android.permission.health.READ_STEPS
+android.permission.health.READ_OXYGEN_SATURATION
+android.permission.health.READ_SLEEP
+
+Verify exact names before modifying.
+
+Preserve the existing:
+
+<queries>
+    <package android:name="com.google.android.apps.healthdata" />
+</queries>
+
+Do NOT:
+
+- remove INTERNET permission
+- enable cleartext traffic unnecessarily
+- disable WebView security
+- change CORS configuration
+- modify backend authentication
+- add WRITE health permissions
+
+If Health Connect requires a permissions rationale activity or intent filter for this SDK/platform combination, implement only what is actually required and explain why.
+
+Do not add unnecessary manifest components.
+
+==================================================
+STEP 6 — TYPESCRIPT BRIDGE
+==================================================
+
+Extend:
+
+src/plugins/HealthConnect.ts
+
+Preserve:
+
+checkAvailability()
+
+Add strongly typed methods:
+
+checkPermissions()
+requestPermissions()
+
+Define a permission result type similar to:
+
+interface HealthConnectPermissionResult {
+  granted: boolean;
+  permissions: {
+    heartRate: boolean;
+    steps: boolean;
+    spo2: boolean;
+    sleep: boolean;
+  };
+}
+
+Keep native and TypeScript plugin names exactly aligned:
+
+HealthConnect
+
+Do not create duplicate plugin registrations.
+
+==================================================
+STEP 7 — TEMPORARY B2.2 DIAGNOSTIC UI
+==================================================
+
+We need a simple way to trigger the permission request on the physical phone.
+
+Add a TEMPORARY, minimal diagnostic control inside the existing Settings page if possible.
+
+Preferred UI:
+
+Health Connect
+
+Status:
+Available
+
+Permissions:
+Heart Rate: Granted / Not granted
+Steps: Granted / Not granted
+Blood Oxygen: Granted / Not granted
+Sleep: Granted / Not granted
+
+Button:
+
+"Connect Health Connect"
+
+or:
+
+"Grant Health Permissions"
+
+When tapped:
+
+1. Call checkAvailability().
+2. If AVAILABLE, call requestPermissions().
+3. Show/log the resulting permission state.
+4. Update the displayed permission statuses.
+
+If unavailable, show a clear non-crashing message.
+
+Do NOT redesign the Settings page.
+
+Do NOT replace MockHealthDataProvider yet.
+
+Do NOT display real health records yet.
+
+The dashboard should continue showing Phase A mock data during B2.2.
+
+The existing yellow:
+
+"Phase A Prototype — Health data is from MockHealthDataProvider"
+
+behavior may remain unchanged.
+
+==================================================
+STEP 8 — DIAGNOSTIC LOGGING
+==================================================
+
+Add temporary logs useful for Chrome Remote DevTools.
+
+Examples:
+
+[HealthConnect B2.2] Checking permissions...
+
+[HealthConnect B2.2] Permissions:
+{
+  heartRate: true,
+  steps: true,
+  spo2: true,
+  sleep: true
+}
+
+Before launching:
+
+[HealthConnect B2.2] Requesting permissions...
+
+After returning:
+
+[HealthConnect B2.2] Permission request completed
+
+[HealthConnect B2.2] Final permissions:
+...
+
+Errors:
+
+[HealthConnect B2.2] Permission request failed: ...
+
+Do not log authentication tokens, passwords, health records, or sensitive user information.
+
+==================================================
+STEP 9 — IMPORTANT PERMISSION EDGE CASES
+==================================================
+
+Explicitly handle:
+
+A. Health Connect AVAILABLE + no permissions
+
+Expected:
+Permission UI opens.
+
+B. User grants all permissions
+
+Expected:
+granted = true
+
+C. User denies all permissions
+
+Expected:
+granted = false
+No crash.
+
+D. User grants only some permissions
+
+Expected:
+Individual states correctly reflect the result.
+Overall granted = false.
+
+E. Permissions were already granted
+
+Expected:
+checkPermissions() returns true.
+Request should not behave incorrectly.
+
+F. User revokes one permission later in Android/Health Connect settings
+
+Expected:
+Next checkPermissions() detects the revocation.
+
+G. Health Connect unavailable
+
+Expected:
+No permission request attempted.
+Graceful result/error.
+
+==================================================
+STEP 10 — DO NOT IMPLEMENT B2.3
+==================================================
+
+STRICT SCOPE BOUNDARY:
+
+Do NOT implement:
+
+- getLatestHeartRate()
+- getTodaySteps()
+- getSpO2()
+- getSleep()
+- getAllRecords()
+- HealthConnectDataProvider
+- AppHealthDataProvider routing
+- backend synchronization changes
+- last_sync filtering
+- duplicate handling
+- replacement of MockHealthDataProvider
+
+Those belong to B2.3/B2.4/B2.5.
+
+B2.2 ends when permission handling works correctly on the physical Android phone.
+
+==================================================
+STEP 11 — BUILD VALIDATION
+==================================================
+
+After implementation run:
+
+npm run build
+
+Then:
+
+npx cap sync android
+
+Then from android:
+
+.\gradlew.bat clean assembleDebug
+
+All three MUST succeed.
+
+Do not stop after npm build.
+
+If Gradle fails:
+
+- diagnose the exact cause
+- make only narrowly scoped fixes
+- do NOT broadly upgrade dependencies
+- do NOT upgrade AGP/Gradle/SDK/Capacitor
+
+If resolving an error would require a major build-system upgrade, STOP and report it instead.
+
+==================================================
+STEP 12 — PHYSICAL PHONE TEST INSTRUCTIONS
+==================================================
+
+After BUILD SUCCESSFUL, provide the exact APK path.
+
+Expected:
+
+F:\Salus-Sync\android\app\build\outputs\apk\debug\app-debug.apk
+
+Provide the exact PowerShell installation command using:
+
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r "F:\Salus-Sync\android\app\build\outputs\apk\debug\app-debug.apk"
+
+Then provide exact testing steps:
+
+1. Install updated APK.
+2. Launch SALUS Sync.
+3. Log in.
+4. Open Settings.
+5. Locate Health Connect section.
+6. Tap Grant/Connect Health Permissions.
+7. Verify Android Health Connect permission UI appears.
+8. Grant all four requested permissions.
+9. Return to SALUS Sync.
+10. Verify all four permission statuses show Granted.
+11. Open chrome://inspect/#devices.
+12. Inspect SALUS Sync WebView.
+13. Verify B2.2 diagnostic logs.
+
+Also explain how to test denial/revocation safely.
+
+==================================================
+FINAL REPORT REQUIRED
+==================================================
+
+When finished, report:
+
+A. Exact files modified
+
+B. Exact files created
+
+C. Exact Health Connect permissions added
+
+D. Native methods implemented
+
+E. How requestPermissions() launches Health Connect UI
+
+F. How activity result is handled
+
+G. How actual granted permissions are re-checked after user interaction
+
+H. TypeScript API added
+
+I. Temporary diagnostic UI added
+
+J. npm run build result
+
+K. npx cap sync android result
+
+L. Gradle clean assembleDebug result
+
+M. APK path
+
+N. Exact ADB install command
+
+O. Exact physical-device testing procedure
+
+P. Confirmation that B1 and B2.1 behavior remains unchanged
+
+Q. Confirmation that MockHealthDataProvider is still active
+
+R. Any limitations or API differences caused by using Health Connect 1.1.0-alpha12
+
+S. GO / NO-GO recommendation for B2.3
+
+SUCCESS CRITERIA
+================
+
+B2.2 is successful only when:
+
+- Existing B1 login/backend functionality still works.
+- B2.1 still reports Health Connect AVAILABLE.
+- Health Connect permission screen opens on the physical phone.
+- Exactly the required four READ permission categories are requested.
+- Grant/deny/partial-grant results are correctly detected.
+- No WRITE permissions are requested.
+- App does not crash on denial or revocation.
+- npm build succeeds.
+- Capacitor sync succeeds.
+- Gradle assembleDebug succeeds.
+- Dashboard remains on MockHealthDataProvider.
+- No B2.3 real health-data reading is implemented.
+
+Do not declare B2.2 PASS based only on compilation.
+
+Final PASS requires physical-device verification of the Health Connect permission screen and resulting permission states.
+
+Begin by auditing the existing B2.1 implementation, then implement B2.2 with the smallest safe set of changes.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-07-24T19:52:21+05:30.
+
+The user's current state is as follows:
+Active Document: f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Cursor is on line: 4
+Other open documents:
+- f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Running terminal commands:
+- npm run dev (in f:\Salus-Sync, running for 11h12m25s)
+</ADDITIONAL_METADATA><USER_REQUEST>
+Implement Phase B2.3 of SALUS Sync: Real Health Connect Data Reading.
+
+IMPORTANT CONTEXT
+=================
+
+The following phases are already complete and physically validated:
+
+Phase A:
+- React/Vite SALUS Sync frontend works.
+- MockHealthDataProvider currently supplies health data to the Dashboard, Health page, and Sync flow.
+
+Phase B1:
+- Capacitor Android application works on a physical Android phone.
+- Login/backend connectivity works against:
+  https://medai-ip.onrender.com
+- CORS for https://localhost is fixed and physically validated.
+
+Phase B2.1:
+- Custom local Capacitor Health Connect plugin exists.
+- Health Connect availability detection works.
+- Physical phone returned:
+  AVAILABLE
+- Dependency currently used:
+  androidx.health.connect:connect-client:1.1.0-alpha12
+- minSdkVersion = 26.
+- Existing Android build environment is stable.
+
+Phase B2.2:
+- Health Connect permission flow is COMPLETE and PHYSICALLY VALIDATED.
+- The official Health Connect permission UI opens correctly.
+- The following permissions can be granted and detected correctly:
+  - Heart Rate
+  - Steps
+  - Blood Oxygen / SpO2
+  - Sleep
+- Permission revocation/re-grant was physically tested.
+- Example:
+  Steps permission was disabled in Health Connect -> SALUS Sync correctly showed "Not granted".
+  Steps permission was enabled again -> SALUS Sync correctly showed "Granted".
+
+Therefore:
+
+PHASE B2.2 = PASS.
+
+DO NOT rewrite or redesign the working permission implementation.
+
+CURRENT HEALTH CONNECT SDK
+==========================
+
+Keep EXACTLY:
+
+androidx.health.connect:connect-client:1.1.0-alpha12
+
+Do NOT upgrade to:
+- 1.1.0 stable
+- rc versions
+- newer Health Connect versions
+
+because newer versions require compileSdk 36 / newer AGP and previously broke compatibility.
+
+Do NOT change:
+- compileSdk
+- targetSdk
+- AGP
+- Gradle
+- Java version
+- Capacitor version
+- minSdk
+- existing CORS/backend configuration
+
+unless an absolutely unavoidable compile blocker is discovered.
+
+If such a blocker occurs:
+
+STOP.
+
+Report the exact error.
+
+Do NOT perform broad dependency upgrades automatically.
+
+
+==================================================
+PHASE B2.3 OBJECTIVE
+==================================================
+
+Implement READ-ONLY access to REAL Health Connect data for exactly these four SALUS metrics:
+
+1. Heart Rate
+2. Steps
+3. Blood Oxygen / SpO2
+4. Sleep
+
+The purpose of B2.3 is ONLY to prove that SALUS Sync can successfully read and normalize real Health Connect records on the physical Android phone.
+
+DO NOT yet replace MockHealthDataProvider in the production Dashboard/Health/Sync flow.
+
+MockHealthDataProvider MUST remain the active application provider during B2.3.
+
+DO NOT sync Health Connect data to the backend yet.
+
+Backend integration/provider switching belongs to later phases.
+
+B2.3 must first validate the native reads independently.
+
+
+==================================================
+CRITICAL IMPLEMENTATION STRATEGY
+==================================================
+
+Implement and verify the metrics incrementally.
+
+Order:
+
+B2.3A — Heart Rate
+B2.3B — Steps
+B2.3C — SpO2
+B2.3D — Sleep
+
+Do NOT blindly implement four large unverified native queries at once.
+
+However, you may complete all four during this task if:
+
+- each implementation is isolated,
+- each failure is diagnosable,
+- the project continues compiling after each metric,
+- no working B2.1/B2.2 behavior is modified.
+
+Use the existing:
+
+HealthConnectPlugin.java
+
+Do NOT introduce a second Health Connect plugin.
+
+Use the existing HealthConnectClient created by the plugin.
+
+
+==================================================
+TASK 1 — AUDIT THE EXISTING DATA MODEL FIRST
+==================================================
+
+Before writing native code, inspect:
+
+src/models/health.ts
+src/providers/HealthDataProvider.ts
+src/providers/MockHealthDataProvider.ts
+
+Report the exact current:
+
+HealthRecord structure
+
+and determine how these native Health Connect fields should eventually map to it:
+
+- metric/type
+- numeric value
+- unit
+- start time
+- end time
+- source/package
+- device name/model
+
+DO NOT modify the existing HealthRecord interface unless absolutely necessary.
+
+The native bridge should preferably expose a clean normalized shape compatible with the existing architecture.
+
+
+==================================================
+TASK 2 — HEART RATE READ
+==================================================
+
+Add a native Capacitor method conceptually equivalent to:
+
+getLatestHeartRate()
+
+Use:
+
+HeartRateRecord
+
+Read real Health Connect records.
+
+For B2.3 diagnostic validation, use a practical bounded lookback window rather than querying unlimited history.
+
+Recommended:
+
+now - 7 days
+to
+now
+
+Return the latest available heart-rate sample/record.
+
+IMPORTANT:
+
+HeartRateRecord can contain multiple samples.
+
+Do NOT assume the record itself contains one simple BPM number.
+
+Correctly inspect its samples and determine the latest relevant sample.
+
+Return a normalized object similar to:
+
+{
+  available: true,
+  hasData: true,
+  value: 72,
+  unit: "bpm",
+  startTime: "...ISO-8601...",
+  endTime: "...ISO-8601...",
+  source: "...package name...",
+  deviceName: "...if available..."
+}
+
+If permission is missing:
+
+DO NOT crash.
+
+Return a structured result such as:
+
+{
+  available: true,
+  hasPermission: false,
+  hasData: false
+}
+
+If permission exists but no records exist:
+
+{
+  available: true,
+  hasPermission: true,
+  hasData: false
+}
+
+Keep these states distinguishable:
+
+- Health Connect unavailable
+- permission missing
+- permission granted but no data
+- actual data returned
+- native/query error
+
+
+==================================================
+TASK 3 — STEPS READ
+==================================================
+
+Add:
+
+getTodaySteps()
+
+Use Health Connect StepsRecord and/or the SDK-supported aggregation mechanism compatible with:
+
+connect-client:1.1.0-alpha12
+
+Goal:
+
+Return TOTAL steps for the phone user's current local calendar day.
+
+IMPORTANT:
+
+Do NOT simply return the latest StepsRecord.
+
+Steps must represent today's total.
+
+The time boundary must mean:
+
+local midnight today
+->
+current time
+
+Be careful with timezone conversion between:
+
+LocalDate
+ZoneId.systemDefault()
+Instant
+
+Avoid double-counting overlapping records if Health Connect aggregation APIs provide a safer official total.
+
+Prefer the official aggregate API if supported cleanly by alpha12.
+
+Return normalized output such as:
+
+{
+  available: true,
+  hasPermission: true,
+  hasData: true,
+  value: 3240,
+  unit: "steps",
+  startTime: "...",
+  endTime: "...",
+  sources: [...]
+}
+
+If zero steps are legitimately present, distinguish:
+
+value = 0
+
+from:
+
+no accessible data
+
+where possible.
+
+
+==================================================
+TASK 4 — SPO2 READ
+==================================================
+
+Add:
+
+getLatestSpO2()
+
+Use:
+
+OxygenSaturationRecord
+
+Query a bounded recent period, preferably the last 7 days.
+
+Return the latest reading.
+
+Normalize the Health Connect percentage representation correctly.
+
+VERIFY the SDK's actual percentage representation before transforming it.
+
+Do NOT blindly multiply or divide by 100.
+
+The SALUS-facing value should look like:
+
+98
+
+meaning:
+
+98%
+
+not:
+
+0.98
+
+unless the existing SALUS model explicitly expects otherwise.
+
+Return:
+
+{
+  available: true,
+  hasPermission: true,
+  hasData: true,
+  value: 98,
+  unit: "%",
+  startTime: "...",
+  endTime: "...",
+  source: "...",
+  deviceName: "..."
+}
+
+
+==================================================
+TASK 5 — SLEEP READ
+==================================================
+
+Add:
+
+getLatestSleep()
+
+Use:
+
+SleepSessionRecord
+
+This requires special care.
+
+Do NOT simply choose a random/latest fragment and call its duration "sleep".
+
+Inspect the available SleepSessionRecord structure supported by alpha12.
+
+For B2.3 diagnostic purposes:
+
+Find the most recent completed sleep session within a reasonable lookback window, such as 7 days.
+
+Return its duration in MINUTES as the canonical numeric value.
+
+For example:
+
+432 minutes
+
+can later be displayed as:
+
+7h 12m
+
+Return:
+
+{
+  available: true,
+  hasPermission: true,
+  hasData: true,
+  value: 432,
+  unit: "minutes",
+  startTime: "...",
+  endTime: "...",
+  source: "...",
+  deviceName: "..."
+}
+
+If stages are available, do NOT overcomplicate B2.3 by implementing sleep-stage analytics unless required for correct duration.
+
+Primary objective:
+
+reliably obtain the latest completed sleep session duration.
+
+
+==================================================
+TASK 6 — HEALTH CONNECT SDK / JAVA INTEROP
+==================================================
+
+This project deliberately uses:
+
+Health Connect 1.1.0-alpha12
++
+Java custom Capacitor plugin.
+
+The SDK contains Kotlin suspend APIs.
+
+We already encountered an important JVM interoperability issue in B2.2:
+
+A suspend function may:
+
+1. return COROUTINE_SUSPENDED and later invoke resumeWith()
+
+OR
+
+2. complete synchronously and return its result immediately.
+
+B2.2 was fixed by correctly handling BOTH paths.
+
+YOU MUST APPLY THE SAME PRINCIPLE TO HEALTH DATA READS.
+
+Do NOT write Java Continuation code that only handles resumeWith().
+
+For every suspend Health Connect read/aggregate call:
+
+Capture the immediate Object return.
+
+If:
+
+ret == IntrinsicsKt.getCOROUTINE_SUSPENDED()
+
+wait for resumeWith().
+
+Otherwise:
+
+process the synchronous return immediately.
+
+Guarantee every Capacitor PluginCall resolves or rejects EXACTLY ONCE.
+
+Do not leave hanging calls.
+
+
+==================================================
+TASK 7 — TYPESCRIPT BRIDGE
+==================================================
+
+Extend:
+
+src/plugins/HealthConnect.ts
+
+Add strongly typed methods for:
+
+getLatestHeartRate()
+getTodaySteps()
+getLatestSpO2()
+getLatestSleep()
+
+Create reusable TypeScript result interfaces rather than using any.
+
+Example concept:
+
+interface HealthConnectMetricResult {
+  available: boolean;
+  hasPermission: boolean;
+  hasData: boolean;
+  value?: number;
+  unit?: string;
+  startTime?: string;
+  endTime?: string;
+  source?: string;
+  deviceName?: string;
+  error?: string;
+}
+
+Adjust fields if needed based on the existing SALUS data model.
+
+Do not break:
+
+checkAvailability()
+checkPermissions()
+requestPermissions()
+
+
+==================================================
+TASK 8 — TEMPORARY B2.3 DIAGNOSTIC UI
+==================================================
+
+Use the existing Health Connect diagnostic area in:
+
+SettingsPage.tsx
+
+Extend it temporarily.
+
+Do NOT modify Dashboard health cards yet.
+
+When Health Connect is AVAILABLE and permissions are granted, provide a diagnostic action such as:
+
+"Read Health Data"
+
+When tapped, call all four B2.3 native methods.
+
+Display clearly:
+
+Heart Rate:
+72 bpm
+or
+No data
+
+Steps Today:
+3240
+or
+No data
+
+Blood Oxygen:
+98%
+or
+No data
+
+Latest Sleep:
+7h 12m
+or
+No data
+
+Also display meaningful states when permission is missing.
+
+Examples:
+
+Heart Rate: Permission required
+
+Steps: Permission required
+
+Do NOT display fake/mock values in this diagnostic block.
+
+This section must show ONLY actual Health Connect query results.
+
+
+==================================================
+TASK 9 — DIAGNOSTIC LOGGING
+==================================================
+
+Add temporary structured Java logging with:
+
+TAG = SALUS_HEALTH_CONNECT
+
+For each query log:
+
+- metric being queried
+- permission status
+- query start Instant
+- query end Instant
+- number of records returned
+- selected record timestamp
+- normalized value
+- data origin package name
+- device information if available
+
+Do NOT log:
+
+- auth tokens
+- passwords
+- personally identifying account information
+
+Also log structured results in Chrome DevTools, for example:
+
+[HealthConnect B2.3] Heart Rate result: {...}
+
+[HealthConnect B2.3] Steps result: {...}
+
+[HealthConnect B2.3] SpO2 result: {...}
+
+[HealthConnect B2.3] Sleep result: {...}
+
+
+==================================================
+TASK 10 — DATA ORIGIN / DEVICE METADATA
+==================================================
+
+Where supported by the exact alpha12 record APIs, extract:
+
+record.metadata.dataOrigin.packageName
+
+and device metadata such as:
+
+manufacturer
+model
+
+Do not assume these fields are always non-null.
+
+If unavailable:
+
+return null/omit the field.
+
+This metadata is especially important because we eventually need to determine whether data came from:
+
+- phone
+- Health Connect
+- HONOR/Huawei ecosystem
+- Health Sync bridge
+- another health app
+
+Do NOT hardcode "HONOR Band 6" as the source.
+
+Report the actual metadata Health Connect provides.
+
+
+==================================================
+TASK 11 — HONOR BAND 6 REALITY CHECK
+==================================================
+
+Do NOT assume that successfully reading Health Connect means HONOR Band 6 data is available.
+
+SALUS Sync only reads what Health Connect contains.
+
+Possible path:
+
+HONOR Band 6
+->
+HONOR Health / Huawei Health
+->
+possibly Health Sync or another bridge
+->
+Health Connect
+->
+SALUS Sync
+
+During physical testing, if:
+
+permissions are granted
+but
+Heart Rate / SpO2 / Sleep return no records
+
+DO NOT fabricate data and DO NOT classify this automatically as a plugin failure.
+
+Clearly report:
+
+"Health Connect query succeeded, but no accessible records were found."
+
+We will separately verify whether HONOR Health exports those metrics into Health Connect.
+
+
+==================================================
+TASK 12 — DO NOT SWITCH PROVIDERS YET
+==================================================
+
+CRITICAL:
+
+Do NOT create or activate the final HealthConnectDataProvider yet unless only creating an unused skeleton is necessary.
+
+Do NOT modify the existing Dashboard/Health/Sync consumers to use real data.
+
+Do NOT remove:
+
+MockHealthDataProvider
+
+Do NOT remove the yellow Phase A prototype indicator yet.
+
+The existing application must continue operating exactly as before.
+
+B2.3 is a native-read validation phase only.
+
+Provider routing belongs to B2.4.
+
+
+==================================================
+TASK 13 — DO NOT IMPLEMENT BACKEND SYNC
+==================================================
+
+Do NOT:
+
+- POST Health Connect records to the backend
+- modify Supabase
+- modify backend endpoints
+- implement last_sync filtering
+- implement deduplication
+- modify sync history
+
+Those belong to B2.5.
+
+B2.3 ends after successful physical-device reads.
+
+
+==================================================
+TASK 14 — BUILD VALIDATION
+==================================================
+
+After implementation run:
+
+npm run build
+
+Then:
+
+npx cap sync android
+
+Then from android:
+
+.\gradlew.bat clean assembleDebug
+
+All three must succeed.
+
+If Gradle fails because an API used in your code does not exist in:
+
+1.1.0-alpha12
+
+DO NOT upgrade Health Connect.
+
+Instead inspect the exact alpha12 API and adapt the implementation to that version.
+
+Do not guess APIs from newer Health Connect documentation.
+
+
+==================================================
+TASK 15 — PHYSICAL DEVICE TEST INSTRUCTIONS
+==================================================
+
+After successful build, provide the exact APK path.
+
+Expected:
+
+F:\Salus-Sync\android\app\build\outputs\apk\debug\app-debug.apk
+
+Provide exact installation command:
+
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r "F:\Salus-Sync\android\app\build\outputs\apk\debug\app-debug.apk"
+
+Then STOP.
+
+Do NOT proceed to B2.4 automatically.
+
+I will physically test the APK.
+
+
+==================================================
+PHYSICAL TEST CASES THAT MUST BE POSSIBLE
+==================================================
+
+Test 1:
+All four permissions granted.
+
+Tap:
+
+Read Health Data
+
+Expected:
+
+Each metric returns either:
+
+REAL DATA
+
+or explicitly:
+
+NO DATA FOUND
+
+No mock values may appear in B2.3 diagnostics.
+
+
+Test 2:
+Disable Steps permission in Health Connect.
+
+Return to SALUS Sync.
+
+Expected:
+
+Steps:
+Permission required
+
+Other granted metrics should still be queryable.
+
+
+Test 3:
+Re-enable Steps.
+
+Expected:
+
+Steps query works again.
+
+
+Test 4:
+No records available for a metric.
+
+Expected:
+
+No data
+
+NOT:
+
+0
+
+unless zero is a legitimate queried/aggregated result.
+
+
+Test 5:
+Health Connect query error.
+
+Expected:
+
+Clear diagnostic error.
+
+App must NOT crash.
+
+
+==================================================
+IMPORTANT DISTINCTION FOR STEPS
+==================================================
+
+The app currently displays mock:
+
+3,240 steps
+
+Do NOT use this value to judge success.
+
+If Health Connect returns:
+
+843
+12567
+0
+or no data
+
+that may be correct.
+
+B2.3 diagnostic values must come exclusively from Health Connect.
+
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+B2.3 is PASS only if:
+
+1. npm run build succeeds.
+2. npx cap sync android succeeds.
+3. Gradle assembleDebug succeeds.
+4. Existing login/backend functionality remains intact.
+5. B2.1 availability detection still works.
+6. B2.2 permissions still work.
+7. Heart Rate native query executes without hanging/crashing.
+8. Steps native query executes without hanging/crashing.
+9. SpO2 native query executes without hanging/crashing.
+10. Sleep native query executes without hanging/crashing.
+11. Missing permissions are handled gracefully.
+12. No-data conditions are distinguishable from errors.
+13. Returned real records include timestamps/source metadata where available.
+14. No mock values are used by the B2.3 diagnostic UI.
+15. MockHealthDataProvider remains active for the normal Dashboard/Health/Sync application.
+16. No backend health sync is implemented yet.
+17. Physical-device validation is performed before B2.4.
+
+
+==================================================
+FINAL REPORT REQUIRED
+==================================================
+
+At completion, provide:
+
+A. Exact files modified.
+
+B. Exact files created.
+
+C. Exact native methods added.
+
+D. Exact Health Connect record/API used for each:
+
+Heart Rate
+Steps
+SpO2
+Sleep
+
+E. Exact query/lookback window used for each metric.
+
+F. Exact normalization rules:
+
+Heart Rate -> BPM
+Steps -> today's total
+SpO2 -> percentage
+Sleep -> minutes
+
+G. How Kotlin suspend synchronous + asynchronous completion is handled.
+
+H. How missing permission is detected.
+
+I. How "no data" differs from an actual error.
+
+J. Metadata extracted from records.
+
+K. TypeScript bridge changes.
+
+L. Diagnostic UI changes.
+
+M. npm run build result.
+
+N. npx cap sync android result.
+
+O. Gradle clean assembleDebug result.
+
+P. APK path.
+
+Q. Exact ADB install command.
+
+R. Exact physical-phone testing procedure.
+
+S. Expected Chrome DevTools logs.
+
+T. Confirmation that MockHealthDataProvider is STILL active.
+
+U. Confirmation that no backend/Supabase sync changes were made.
+
+V. Any limitations caused specifically by Health Connect 1.1.0-alpha12.
+
+W. Any uncertainty regarding HONOR Band 6 -> Health Connect data availability.
+
+X. GO / NO-GO recommendation for Phase B2.4.
+
+STOP after providing this report.
+
+Do NOT implement B2.4 automatically.
+Do NOT implement B2.5 automatically.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-07-24T20:39:48+05:30.
+
+The user's current state is as follows:
+Active Document: f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Cursor is on line: 4
+Other open documents:
+- f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Running terminal commands:
+- npm run dev (in f:\Salus-Sync, running for 11h59m52s)
+</ADDITIONAL_METADATA><USER_REQUEST>
+Implement Phase B2.4 of SALUS Sync: integrate the real Android Health Connect data source into the existing React application architecture.
+
+IMPORTANT CONTEXT
+
+Phase B1:
+- Android/Capacitor environment is stable.
+- Existing backend/API functionality works.
+
+Phase B2.1:
+- Native Health Connect availability detection works on a physical Android device.
+
+Phase B2.2:
+- Health Connect permission flow works on a physical Android device.
+- The following permissions have been successfully tested:
+  - Heart Rate
+  - Steps
+  - Blood Oxygen / SpO2
+  - Sleep
+- Permission revocation and re-granting correctly update state.
+
+Phase B2.3:
+- Real Health Connect reads are working on a physical Android device.
+
+Physically validated examples:
+- Heart Rate: 73 bpm
+- Steps: 4809
+- SpO2: 93%
+- Sleep: 33 minutes
+
+The native methods currently available are:
+
+- checkAvailability()
+- checkPermissions()
+- requestPermissions()
+- getLatestHeartRate()
+- getTodaySteps()
+- getLatestSpO2()
+- getLatestSleep()
+
+The project currently uses:
+
+androidx.health.connect:connect-client:1.1.0-alpha12
+
+DO NOT upgrade this dependency.
+
+Current stable Android environment must remain unchanged:
+- Capacitor 6
+- compileSdk 35
+- targetSdk 35
+- minSdk 26
+- AGP 8.2.1
+- Gradle 8.7
+- Java 21
+- Health Connect 1.1.0-alpha12
+
+DO NOT perform broad dependency upgrades.
+
+--------------------------------------------------
+PHASE B2.4 OBJECTIVE
+--------------------------------------------------
+
+Replace direct MockHealthDataProvider usage in the Android application with a proper provider-selection architecture.
+
+The goal is:
+
+WEB:
+React UI
+    ↓
+AppHealthDataProvider
+    ↓
+MockHealthDataProvider
+
+ANDROID:
+React UI
+    ↓
+AppHealthDataProvider
+    ↓
+HealthConnectDataProvider
+    ↓
+Capacitor HealthConnect plugin
+    ↓
+Android Health Connect
+
+The existing React pages should consume the HealthDataProvider abstraction rather than importing MockHealthDataProvider directly.
+
+CRITICAL:
+
+Do NOT silently fall back to mock health data on Android.
+
+If Health Connect is:
+- unavailable,
+- permission denied,
+- or contains no data,
+
+the Android application must represent that state honestly.
+
+Mock data must only remain as the browser/web development fallback.
+
+A production Android user must NEVER mistake mock values for real health data.
+
+--------------------------------------------------
+TASK 1 — AUDIT CURRENT ARCHITECTURE FIRST
+--------------------------------------------------
+
+Before modifying code, inspect:
+
+src/models/health.ts
+
+src/providers/HealthDataProvider.ts
+
+src/providers/MockHealthDataProvider.ts
+
+src/plugins/HealthConnect.ts
+
+src/pages/Dashboard/DashboardPage.tsx
+
+src/pages/HealthData/HealthDataPage.tsx
+
+src/pages/Sync/SyncPage.tsx
+
+src/pages/Settings/SettingsPage.tsx
+
+Also search the entire src directory for:
+
+mockHealthDataProvider
+
+and identify every direct consumer.
+
+Report the findings before/while implementing.
+
+Do not redesign the entire application.
+
+Preserve the existing HealthDataProvider abstraction wherever possible.
+
+--------------------------------------------------
+TASK 2 — CREATE HealthConnectDataProvider
+--------------------------------------------------
+
+Create:
+
+src/providers/HealthConnectDataProvider.ts
+
+It must implement the existing:
+
+HealthDataProvider
+
+interface.
+
+Map the native B2.3 methods into the existing SALUS health-data model.
+
+Use:
+
+HealthConnect.getLatestHeartRate()
+HealthConnect.getTodaySteps()
+HealthConnect.getLatestSpO2()
+HealthConnect.getLatestSleep()
+
+Normalize native results into the exact data structures expected by the existing React application.
+
+Preserve metadata where available:
+
+- value
+- unit
+- start_time
+- end_time
+- source
+- device_name
+- metric/type
+
+Do not invent metadata when Health Connect does not provide it.
+
+Handle these states safely:
+
+1. Health Connect unavailable
+2. Permission missing
+3. No records found
+4. Valid real record
+5. Native/plugin error
+
+No uncaught exception should crash the React UI.
+
+--------------------------------------------------
+TASK 3 — CREATE AppHealthDataProvider
+--------------------------------------------------
+
+Create:
+
+src/providers/AppHealthDataProvider.ts
+
+This must be the central provider-selection layer.
+
+Expected behavior:
+
+If running in a normal web browser:
+
+    use MockHealthDataProvider
+
+If running as a native Android Capacitor application:
+
+    use HealthConnectDataProvider
+
+Use Capacitor platform detection.
+
+Conceptually:
+
+Capacitor.isNativePlatform()
+Capacitor.getPlatform() === 'android'
+
+Do NOT silently use MockHealthDataProvider when Android Health Connect fails.
+
+That is extremely important.
+
+On Android:
+
+Health Connect unavailable
+≠
+use fake data
+
+Permission denied
+≠
+use fake data
+
+No Health Connect records
+≠
+use fake data
+
+Return an appropriate empty/unavailable state instead.
+
+--------------------------------------------------
+TASK 4 — REPLACE DIRECT MOCK IMPORTS
+--------------------------------------------------
+
+Update all application consumers that currently directly import:
+
+mockHealthDataProvider
+
+They must instead consume the application provider/router from:
+
+AppHealthDataProvider
+
+Likely consumers include:
+
+DashboardPage.tsx
+HealthDataPage.tsx
+SyncPage.tsx
+
+But search the project rather than assuming only these files.
+
+Preserve existing UI behavior as much as possible.
+
+Do not unnecessarily redesign components.
+
+--------------------------------------------------
+TASK 5 — ANDROID UI MUST NOT DISPLAY MOCK DATA
+--------------------------------------------------
+
+This is a strict requirement.
+
+Currently the Dashboard may show Phase A mock values such as:
+
+72 bpm
+3240 steps
+98% SpO2
+7h 12m sleep
+
+After B2.4, those mock values must NOT appear in the native Android application unless those exact values genuinely came from Health Connect.
+
+On Android, Dashboard and Health Data screens should use real Health Connect values.
+
+If no data exists, show a clear empty/unavailable state rather than mock values.
+
+Examples:
+
+"No health data available"
+
+"Health Connect permission required"
+
+"Health Connect unavailable"
+
+Use the existing design system/styles where possible.
+
+Do not perform a major UI redesign.
+
+--------------------------------------------------
+TASK 6 — HANDLE PERMISSION STATE
+--------------------------------------------------
+
+Before attempting real reads on Android, account for Health Connect permission state.
+
+Use the existing:
+
+checkAvailability()
+checkPermissions()
+
+Do not automatically launch permission dialogs every time the app starts.
+
+Permission requests should remain user-driven.
+
+If permissions are missing, the relevant UI should clearly indicate that Health Connect access is required.
+
+Do not create permission-request loops.
+
+--------------------------------------------------
+TASK 7 — SLEEP KNOWN ISSUE
+--------------------------------------------------
+
+IMPORTANT:
+
+B2.3 physically proved that getLatestSleep() works, but it currently returns only the latest SleepSessionRecord.
+
+Example observed:
+
+Main/night sleep:
+5h 43m
+
+Later morning sleep:
+33m
+
+Current B2.3 result:
+33 minutes
+
+Therefore the current value is technically the latest session, not necessarily the user's total/main daily sleep.
+
+For B2.4:
+
+DO NOT silently pretend 33 minutes is the complete daily sleep total.
+
+First inspect the existing native implementation and determine the safest behavior.
+
+Preferred approach for this phase:
+
+Either:
+
+A. Implement a minimal, well-defined daily sleep aggregation if it can be done safely without destabilizing B2.3,
+
+OR
+
+B. Keep the existing native read but clearly isolate/document the limitation so the architecture does not falsely label it as a complete daily sleep total.
+
+If implementing aggregation:
+
+- Define a clear sleep-day window.
+- Consider overnight sessions crossing midnight.
+- Avoid blindly summing duplicate/overlapping sessions.
+- Do not sum arbitrary records from the entire last 7 days.
+- Explain the exact algorithm used.
+
+Do not introduce a large sleep-analysis subsystem in B2.4.
+
+--------------------------------------------------
+TASK 8 — TEMPORARY DIAGNOSTIC UI
+--------------------------------------------------
+
+The Settings page currently contains temporary B2.2/B2.3 diagnostic controls.
+
+Do NOT remove them yet unless their removal is required for correctness.
+
+They are useful for comparing:
+
+native raw Health Connect reads
+
+vs.
+
+values shown through HealthConnectDataProvider on Dashboard/Health pages.
+
+Keep diagnostic functionality isolated from production provider logic.
+
+--------------------------------------------------
+TASK 9 — DO NOT IMPLEMENT B2.5 BACKEND SYNC YET
+--------------------------------------------------
+
+Do NOT modify backend synchronization/idempotency logic in this phase.
+
+Do NOT implement last_sync filtering yet.
+
+Do NOT redesign backend APIs.
+
+Do NOT modify Supabase schema.
+
+Do NOT send new Health Connect records to the backend unless existing behavior already does so and changing it would break the app.
+
+B2.4 is specifically about:
+
+REAL HEALTH DATA → PROVIDER ABSTRACTION → REACT UI
+
+Backend synchronization will be handled separately.
+
+--------------------------------------------------
+TASK 10 — PRESERVE STABLE PHASES
+--------------------------------------------------
+
+Do not break:
+
+- B1 Android build
+- B2.1 availability detection
+- B2.2 permission flow
+- B2.3 native data reads
+- authentication
+- routing
+- backend connection
+- existing web development mode
+
+Do not upgrade:
+
+- Health Connect
+- Capacitor
+- AGP
+- Gradle
+- Java
+- compileSdk
+- targetSdk
+
+unless absolutely required.
+
+No dependency upgrade should be necessary for B2.4.
+
+--------------------------------------------------
+TASK 11 — BUILD VALIDATION
+--------------------------------------------------
+
+After implementation run:
+
+npm run build
+
+npx cap sync android
+
+Then:
+
+cd android
+.\gradlew.bat clean assembleDebug
+
+All three must succeed.
+
+Also verify that the newly built frontend assets were actually copied into:
+
+android/app/src/main/assets/public
+
+before claiming physical-device readiness.
+
+--------------------------------------------------
+TASK 12 — PHYSICAL DEVICE TEST PLAN
+--------------------------------------------------
+
+Provide an exact test procedure for me.
+
+The test must verify:
+
+1. Install the new APK.
+
+2. Open SALUS Sync.
+
+3. Confirm Health Connect permissions remain granted.
+
+4. Open Dashboard.
+
+5. Verify the old Phase A mock values are gone on Android.
+
+6. Compare Dashboard values against the B2.3 Settings diagnostic reads.
+
+For example, if diagnostic reads:
+
+Heart Rate: 73 bpm
+Steps: 4809
+SpO2: 93%
+
+Dashboard should show corresponding real values, subject only to clearly documented formatting/aggregation rules.
+
+7. Open Health Data page.
+
+Verify it also uses the real provider.
+
+8. Revoke one Health Connect permission.
+
+Return to SALUS Sync.
+
+Verify:
+- app does not crash
+- affected metric does not show fake/mock data
+- UI indicates missing permission/unavailable data appropriately
+
+9. Re-enable permission.
+
+Verify real data returns.
+
+10. Verify web/browser mode still uses MockHealthDataProvider so normal frontend development remains possible.
+
+--------------------------------------------------
+STOP CONDITION
+--------------------------------------------------
+
+STOP after B2.4 provider integration and successful builds.
+
+Do NOT begin B2.5.
+
+Wait for physical-device validation before proceeding.
+
+--------------------------------------------------
+FINAL REPORT REQUIRED
+--------------------------------------------------
+
+Return:
+
+A. Architecture audit findings
+
+B. Every file created
+
+C. Every file modified
+
+D. Exact direct MockHealthDataProvider imports found before changes
+
+E. How HealthConnectDataProvider implements HealthDataProvider
+
+F. Exact mapping from each Health Connect native result to SALUS models
+
+G. How AppHealthDataProvider selects Web vs Android provider
+
+H. Confirmation Android never silently falls back to mock data
+
+I. Behavior for unavailable Health Connect
+
+J. Behavior for missing permissions
+
+K. Behavior for no records
+
+L. Behavior for native/plugin errors
+
+M. Exact handling of the known sleep-session issue
+
+N. Whether temporary B2.2/B2.3 diagnostics remain
+
+O. npm run build result
+
+P. npx cap sync android result
+
+Q. Gradle clean assembleDebug result
+
+R. APK path
+
+S. Exact ADB installation command
+
+T. Exact physical-device testing procedure
+
+U. Confirmation B1/B2.1/B2.2/B2.3 remain intact
+
+V. Confirmation no dependency/build-system versions were changed
+
+W. Confirmation B2.5/backend sync was NOT implemented
+
+X. GO / NO-GO recommendation after physical-device validation
+
+Do not claim B2.4 is fully complete until the Android APK is physically tested and the Dashboard/Health pages are confirmed to display real Health Connect data rather than Phase A mock data.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-07-24T21:05:06+05:30.
+
+The user's current state is as follows:
+Active Document: f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Cursor is on line: 4
+Other open documents:
+- f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Running terminal commands:
+- npm run dev (in f:\Salus-Sync, running for 12h25m10s)
+</ADDITIONAL_METADATA><USER_REQUEST>
+Implement Phase B2.5 of SALUS Sync: Real Health Connect → Backend Sync Integration.
+
+CURRENT VERIFIED STATE
+----------------------
+Phase B2.4 is complete, physically tested, and committed.
+
+The Android app now correctly reads and displays real Health Connect data through:
+
+Health Connect
+    ↓
+HealthConnectPlugin.java
+    ↓
+HealthConnect.ts
+    ↓
+HealthConnectDataProvider
+    ↓
+AppHealthDataProvider
+    ↓
+Dashboard / Health Data UI
+
+Physically verified values include:
+- Heart Rate: latest valid sample
+- Steps: Health Connect aggregate total with duplicate-source handling
+- SpO2: latest reading
+- Sleep: aggregated completed sleep using the finalized deterministic sleep-day policy
+
+Important B2.4 fixes already completed:
+- Steps use Health Connect Aggregate API instead of naïvely summing overlapping records.
+- Heart rate scans records/samples to select the globally latest sample.
+- Sleep uses SLEEP_DURATION_TOTAL aggregation.
+- Sleep afternoon rollover bug is fixed.
+- Android never falls back to mock health data.
+- Web continues using MockHealthDataProvider.
+
+DO NOT MODIFY OR REGRESS THESE WORKING B2.4 ALGORITHMS.
+
+PHASE B2.5 OBJECTIVE
+--------------------
+Replace the remaining mock-data path in the Sync workflow with real Health Connect data on Android.
+
+The Sync page must use the same provider abstraction already introduced in B2.4.
+
+Target architecture:
+
+Android:
+
+Health Connect
+    ↓
+HealthConnectPlugin.java
+    ↓
+HealthConnectDataProvider
+    ↓
+AppHealthDataProvider
+    ↓
+Sync workflow
+    ↓
+Existing SALUS backend API
+
+Web:
+
+MockHealthDataProvider
+    ↓
+AppHealthDataProvider
+    ↓
+Sync workflow
+    ↓
+Existing SALUS backend API
+
+STRICT REQUIREMENTS
+-------------------
+
+1. DO NOT change the verified native algorithms for:
+   - Heart Rate
+   - Steps
+   - SpO2
+   - Sleep
+
+2. DO NOT upgrade:
+   - Capacitor
+   - Health Connect
+   - Gradle
+   - AGP
+   - Kotlin
+   - Java
+   - Android SDK
+   - any dependency unless absolutely required.
+
+Keep the currently working environment unchanged.
+
+3. Inspect the existing SyncPage.tsx and existing sync/API service before making changes.
+
+Do NOT redesign the backend contract unnecessarily.
+
+4. Identify exactly:
+   - what MockHealthDataProvider currently returns to SyncPage
+   - how SyncPage transforms that data
+   - what payload is currently sent to the backend
+   - what backend endpoint is used
+   - what fields are required
+   - how timestamps and units are represented
+   - whether the backend expects individual records or summary/current values
+
+Report this BEFORE changing the sync behavior.
+
+5. Replace direct use of MockHealthDataProvider in SyncPage with AppHealthDataProvider.
+
+On Android:
+- Real Health Connect data MUST be used.
+- NEVER silently fall back to mock data.
+
+On Web:
+- Existing mock behavior may remain through AppHealthDataProvider.
+
+6. Permission handling
+
+Before syncing on Android, verify:
+- Health Connect availability
+- required permissions
+
+If permissions are missing:
+- DO NOT sync mock data
+- DO NOT send fake/zero values
+- show a clear user-facing message
+- fail gracefully without crashing
+
+7. Missing-data handling
+
+A missing metric must NOT become:
+
+0
+"0"
+fake mock data
+a fabricated record
+
+Distinguish:
+
+hasPermission: false
+
+from:
+
+hasPermission: true
+hasData: false
+
+Only upload metrics that genuinely contain valid Health Connect data, unless the existing backend contract requires another explicitly justified representation.
+
+8. Preserve metric semantics
+
+Heart Rate:
+Use the exact B2.4 latest-sample result.
+
+Steps:
+Use the exact B2.4 Health Connect aggregated current-day total.
+
+SpO2:
+Use the exact B2.4 latest reading.
+
+Sleep:
+Use the exact finalized B2.4 aggregated sleep result.
+
+Do NOT independently recalculate these values inside SyncPage.
+
+The Sync workflow should consume provider results, not duplicate native health algorithms.
+
+9. Prevent accidental duplicate sync behavior.
+
+Inspect the existing backend/API behavior and determine whether synchronization is currently idempotent.
+
+Check:
+- repeated presses of "Sync Now"
+- duplicate database records
+- whether timestamps/record IDs prevent duplication
+- whether summary metrics overwrite/upsert or insert
+
+Do NOT invent a new deduplication system unless needed.
+
+Document the existing behavior and make the smallest safe change.
+
+10. Sync status
+
+Only mark a sync as successful if the backend request actually succeeds.
+
+Update "Last Sync" only after confirmed backend success.
+
+If:
+- Health Connect read fails
+- permissions are missing
+- network request fails
+- backend rejects the request
+
+then do NOT falsely update Last Sync.
+
+11. Add useful diagnostic logging during B2.5.
+
+Before backend upload, log a sanitized summary such as:
+
+[B2.5 Sync] Provider: HealthConnect
+[B2.5 Sync] Preparing real health payload
+[B2.5 Sync] Heart Rate: ...
+[B2.5 Sync] Steps: ...
+[B2.5 Sync] SpO2: ...
+[B2.5 Sync] Sleep: ...
+
+Then:
+
+[B2.5 Sync] Payload prepared: ...
+
+And after API call:
+
+[B2.5 Sync] Backend response: ...
+
+Do NOT log:
+- authentication tokens
+- passwords
+- sensitive headers
+- unnecessary personal information
+
+12. Preserve B2.2/B2.3 diagnostic UI for now.
+
+Do not remove the Settings diagnostic controls yet.
+
+They are still useful for comparing:
+
+Raw/native diagnostic result
+vs
+Provider result
+vs
+Synced backend payload.
+
+13. Verify consistency.
+
+For a physical Android test, these three values should agree:
+
+Settings → Read Live Data
+Dashboard / Health Data
+Sync payload
+
+For example, if Dashboard shows:
+
+Heart Rate: 73 bpm
+Steps: 3930
+SpO2: 93%
+Sleep: 5h 41m
+
+the Sync workflow must use those same underlying values.
+
+Do not hardcode these example numbers.
+
+14. Do NOT modify unrelated UI or refactor unrelated code.
+
+Keep B2.5 focused on real-data synchronization.
+
+IMPLEMENTATION PROCESS
+----------------------
+
+STEP 1 — INVESTIGATE FIRST
+
+Inspect:
+- SyncPage.tsx
+- HealthDataProvider interface
+- MockHealthDataProvider
+- HealthConnectDataProvider
+- AppHealthDataProvider
+- API/sync service
+- backend payload types/interfaces
+- relevant backend endpoint implementation if present in this repository
+
+Before editing, report:
+
+A. Current SyncPage data source
+B. Current backend endpoint
+C. Current request payload structure
+D. Current duplicate/idempotency behavior
+E. How Last Sync is currently updated
+F. Exact files that need modification
+
+Do not make assumptions.
+
+STEP 2 — IMPLEMENT
+
+Make the smallest architecture-safe changes necessary to route Sync through AppHealthDataProvider.
+
+Android → real Health Connect
+Web → mock provider
+
+Ensure missing permissions/data are handled safely.
+
+STEP 3 — BUILD
+
+Run:
+
+npm run build
+
+npx cap sync android
+
+Then from android:
+
+.\gradlew.bat clean assembleDebug
+
+All must succeed.
+
+STEP 4 — REPORT
+
+Provide:
+
+A. Files changed
+
+B. Exact old sync data flow
+
+C. Exact new Android sync data flow
+
+D. Exact web sync data flow
+
+E. Exact payload sent to backend
+
+F. Missing permission behavior
+
+G. Missing data behavior
+
+H. Duplicate/idempotency behavior
+
+I. Last Sync update behavior
+
+J. npm build result
+
+K. cap sync result
+
+L. Gradle result
+
+M. APK path
+
+N. Any limitations discovered
+
+O. Exact physical-device test procedure
+
+PHYSICAL TEST PLAN
+------------------
+
+After implementation, I will install the APK manually.
+
+I need to verify:
+
+TEST 1 — Real data source
+
+Open Dashboard and note:
+- Heart Rate
+- Steps
+- SpO2
+- Sleep
+
+Open Settings → Read Live Data and compare.
+
+Then go to Sync and press Sync Now.
+
+Expected:
+The payload sent to the backend uses the same real values.
+
+TEST 2 — Backend verification
+
+After sync:
+- verify the request succeeds
+- verify backend/database contains the real values
+- verify no mock values were uploaded
+
+TEST 3 — Repeated sync
+
+Press Sync Now again without meaningful new data.
+
+Verify the existing backend semantics do not create incorrect duplicates.
+
+Report exactly what happens.
+
+TEST 4 — Permission revocation
+
+Revoke one Health Connect permission.
+
+Return/restart SALUS Sync.
+
+Press Sync Now.
+
+Expected:
+- no crash
+- no mock fallback
+- no fabricated zero value
+- unavailable metric is handled according to the backend contract
+- clear UI feedback
+
+TEST 5 — Network/backend failure
+
+If practical, test with network disabled.
+
+Expected:
+- sync fails gracefully
+- Last Sync is NOT falsely updated
+- previous successful Last Sync remains intact
+
+IMPORTANT
+---------
+Do not declare B2.5 complete based only on BUILD SUCCESSFUL.
+
+B2.5 is complete only after physical-device validation confirms:
+
+1. Real Health Connect data reaches the backend.
+2. No mock data is uploaded on Android.
+3. Values match Dashboard/diagnostic results.
+4. Missing permissions/data are handled safely.
+5. Failed sync does not update Last Sync.
+6. Repeated sync behavior is understood and safe.
+
+Start by investigating the current SyncPage → backend flow and present the implementation plan before modifying code.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-07-24T22:02:06+05:30.
+
+The user's current state is as follows:
+Active Document: f:\Salus-Sync\src\providers\HealthConnectDataProvider.ts (LANGUAGE_TYPESCRIPT)
+Cursor is on line: 1
+Other open documents:
+- f:\Salus-Sync\src\providers\HealthConnectDataProvider.ts (LANGUAGE_TYPESCRIPT)
+- f:\Salus-Sync\src\main.tsx (LANGUAGE_TSX)
+Running terminal commands:
+- npm run dev (in f:\Salus-Sync, running for 13h22m10s)
+</ADDITIONAL_METADATA>

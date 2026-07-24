@@ -1,0 +1,865 @@
+<USER_REQUEST>
+We are building a new standalone companion application called:
+
+SALUS Sync
+
+This is a separate project/repository from the existing SALUS healthcare web platform.
+
+SALUS Sync will eventually become a small native Android companion app whose purpose is:
+
+Health Connect → SALUS Sync → FastAPI Backend → Supabase → SALUS Patient Dashboard
+
+However, we are currently implementing:
+
+PHASE A — WEB UI PROTOTYPE
+
+The goal of Phase A is to build and validate the complete user interface, navigation, authentication flow structure, health-data presentation, synchronization UX, and API architecture before recreating/porting the application as a native Android app using Kotlin + Jetpack Compose.
+
+IMPORTANT:
+This Phase A application runs in a browser.
+
+A browser CANNOT directly access Android Health Connect.
+
+Therefore:
+
+- Do NOT attempt to implement Health Connect.
+- Do NOT build fake browser integrations pretending to access Health Connect.
+- Use a clearly isolated mock health-data provider for UI development only.
+- Design the architecture so MockHealthDataProvider can later be replaced conceptually by HealthConnectDataProvider in the native Android app.
+- Do NOT modify the existing SALUS backend.
+- Do NOT create database tables.
+- Do NOT create new backend endpoints.
+- Do NOT implement registration.
+
+=========================================================
+1. TECHNOLOGY
+=========================================================
+
+Build the web prototype using:
+
+- React
+- Vite
+- JavaScript or TypeScript, preferably TypeScript if starting fresh
+- React Router
+- Clean reusable components
+- CSS or the styling system already configured in the generated project
+
+Keep dependencies minimal.
+
+Do NOT add unnecessary frameworks.
+
+The interface should be responsive and designed primarily as a MOBILE APP interface.
+
+On desktop, display the application inside a centered phone-like/max-width application shell rather than stretching everything across the entire screen.
+
+=========================================================
+2. BRAND / DESIGN
+=========================================================
+
+Application name:
+
+SALUS Sync
+
+The design should visually belong to the existing SALUS healthcare ecosystem.
+
+Visual direction:
+
+- Clean healthcare interface
+- Modern
+- Minimal
+- Calm
+- Premium but simple
+- Mobile-first
+- White / subtle warm-white surfaces
+- SALUS green as primary accent
+- Soft mint secondary backgrounds
+- Rounded cards
+- Subtle borders and shadows
+- Clear typography
+- No excessive gradients
+- No clutter
+
+Suggested SALUS primary green:
+
+#14866D
+
+Suggested light mint:
+
+#E6F4F1
+
+Suggested subtle cream:
+
+#FCFBF7
+
+Do not blindly hardcode these everywhere.
+
+Create reusable theme variables/tokens.
+
+Use a simple SALUS leaf/health-inspired logo placeholder if an official asset is not available.
+
+=========================================================
+3. APPLICATION FLOW
+=========================================================
+
+Implement this flow:
+
+Splash
+   ↓
+Login
+   ↓
+Dashboard
+   ├── Health Data
+   ├── Sync
+   └── Settings
+   ↓
+Logout → Login
+
+There is NO registration screen.
+
+Registration is performed only through the main SALUS website.
+
+=========================================================
+4. SPLASH SCREEN
+=========================================================
+
+Create a minimal splash screen.
+
+Show:
+
+SALUS Sync logo/icon
+
+SALUS Sync
+
+Optional subtitle:
+
+"Your health, connected."
+
+The splash should transition naturally to Login or Dashboard depending on whether an authenticated session exists.
+
+For Phase A, session persistence may use localStorage.
+
+=========================================================
+5. LOGIN SCREEN
+=========================================================
+
+Create a polished mobile login screen.
+
+Fields:
+
+Username
+
+Password
+
+Controls:
+
+Show/hide password
+
+Sign In button
+
+Loading state
+
+Error message area
+
+Include text:
+
+"Don't have an account?"
+
+"Create your account on the SALUS web platform."
+
+Do NOT create a Register button that performs registration.
+
+The existing backend login contract is:
+
+POST /api/auth/login
+
+Request:
+
+{
+  "username": "string",
+  "password": "string"
+}
+
+Successful response:
+
+{
+  "access_token": "...",
+  "token_type": "bearer",
+  "user": {
+    "id": 22,
+    "name": "jp",
+    "email": "sample@gmail.com",
+    "role": "patient"
+  }
+}
+
+Design the frontend API layer around this exact response.
+
+Store session information cleanly.
+
+Do not expose the JWT visibly in the UI.
+
+Only patient users should be considered valid SALUS Sync users.
+
+Handle:
+
+- Invalid credentials
+- Network failure
+- Backend unavailable
+- Loading
+- Successful login
+
+=========================================================
+6. MAIN DASHBOARD
+=========================================================
+
+After login, show a clean mobile dashboard.
+
+Header:
+
+SALUS Sync
+
+Greeting:
+
+"Hello, {user.name}"
+
+Small connection/status indicator.
+
+Example:
+
+● Ready to Sync
+
+or
+
+● Backend Connected
+
+Create four primary health metric cards:
+
+1. Heart Rate
+
+Display:
+
+72 bpm
+
+Icon:
+Heart / pulse
+
+2. Steps
+
+Display:
+
+3,240 steps
+
+3. Blood Oxygen
+
+Display:
+
+98%
+
+Use metric identifier:
+
+SPO2
+
+4. Sleep
+
+Display:
+
+7h 12m
+
+Use metric identifier:
+
+SLEEP
+
+These values should initially come from MockHealthDataProvider.
+
+Clearly isolate mock data from UI components.
+
+The UI components must NOT contain hardcoded health readings directly.
+
+=========================================================
+7. HEALTH DATA SECTION
+=========================================================
+
+Create a Health Data screen accessible from bottom navigation.
+
+Display:
+
+Heart Rate
+Steps
+Blood Oxygen
+Sleep
+
+Each metric should show:
+
+- Latest value
+- Unit
+- Last recorded time
+- Source
+- Device name if available
+
+Example:
+
+Heart Rate
+
+72 bpm
+
+Last recorded: Today, 11:45 AM
+
+Source: Health Connect
+
+Device: HONOR Band
+
+For Phase A this information is mocked.
+
+Add empty states.
+
+Example:
+
+"No sleep records available yet."
+
+This is important because Health Connect may legitimately contain no data for a metric.
+
+Do NOT invent values when data is unavailable.
+
+=========================================================
+8. SYNC SCREEN / SYNC CARD
+=========================================================
+
+Synchronization is the central purpose of the app.
+
+Create a prominent synchronization interface.
+
+Show:
+
+Health Connect
+
+↓
+
+SALUS Sync
+
+↓
+
+SALUS Cloud
+
+Visual status indicators should show:
+
+Health data available
+
+Backend connection
+
+Last successful sync
+
+Example:
+
+Health Data
+4 metrics available
+
+Backend
+Connected
+
+Last Sync
+Today, 12:01 PM
+
+Add a large primary button:
+
+Sync Now
+
+When pressed in Phase A:
+
+1. Read mock health records.
+2. Transform them into the backend upload schema.
+3. Simulate or optionally execute the API request depending on configuration.
+4. Show loading/progress.
+5. Show success/failure state.
+
+Success example:
+
+✓ Sync Complete
+
+"12 health records synchronized."
+
+Failure example:
+
+"Sync failed. Check your connection and try again."
+
+Include Retry where appropriate.
+
+=========================================================
+9. BACKEND HEALTH DATA CONTRACT
+=========================================================
+
+The existing backend supports:
+
+GET
+/api/v1/health-sync/status
+
+POST
+/api/v1/health-sync
+
+GET
+/api/v1/health-metrics/latest
+
+GET
+/api/v1/health-metrics/history
+
+Authentication:
+
+Authorization: Bearer <access_token>
+
+The upload body is:
+
+{
+  "records": [
+    {
+      "metric_type": "HEART_RATE",
+      "value": 72,
+      "unit": "bpm",
+      "start_time": "ISO-8601 datetime",
+      "end_time": "ISO-8601 datetime",
+      "source": "Health Connect",
+      "device_name": "HONOR Band"
+    }
+  ]
+}
+
+Allowed metric types:
+
+HEART_RATE
+STEPS
+SLEEP
+SPO2
+
+Create TypeScript interfaces/models corresponding to these contracts.
+
+IMPORTANT:
+
+Do not change these contracts.
+
+Do not invent additional backend fields.
+
+Do not send user_id from the client.
+
+The backend derives user identity from the JWT.
+
+=========================================================
+10. MOCK HEALTH DATA PROVIDER
+=========================================================
+
+Create an abstraction such as:
+
+HealthDataProvider
+
+and an implementation:
+
+MockHealthDataProvider
+
+Conceptually:
+
+HealthDataProvider
+        ↑
+MockHealthDataProvider — Phase A Web
+
+Later:
+
+HealthConnectDataProvider — Native Android
+
+Provide methods conceptually similar to:
+
+getHeartRate()
+
+getSteps()
+
+getSleep()
+
+getSpO2()
+
+getAllRecords()
+
+Keep this layer independent from React UI components.
+
+Generate realistic but clearly development-only sample records.
+
+Do NOT randomly change values on every render.
+
+=========================================================
+11. SETTINGS SCREEN
+=========================================================
+
+Create Settings accessible from bottom navigation.
+
+Sections:
+
+ACCOUNT
+
+Name
+Email
+Role
+
+CONNECTION
+
+Backend URL
+
+Default placeholder/configuration:
+
+https://YOUR_RENDER_BACKEND_URL/
+
+Allow editing the backend URL.
+
+Buttons:
+
+Save
+
+Test Connection
+
+Test Connection should call:
+
+GET /api/v1/health-sync/status
+
+using the stored JWT.
+
+Show:
+
+Connected
+
+or
+
+Connection Failed
+
+Also support local development URLs such as:
+
+http://192.168.x.x:8000/
+
+Do not assume localhost will work when this later becomes an Android app.
+
+SYNC
+
+Show:
+
+Last sync time
+
+Auto Sync
+
+For Phase A, Auto Sync should be presented as:
+
+"Available in Android app"
+
+Do NOT pretend browser background sync is equivalent to Android WorkManager.
+
+ABOUT
+
+SALUS Sync
+
+Version 1.0.0 Prototype
+
+Include:
+
+"Companion app for the SALUS healthcare platform."
+
+=========================================================
+12. LOGOUT
+=========================================================
+
+Provide Logout in Settings.
+
+On logout:
+
+- Clear authentication token
+- Clear user session
+- Return to Login
+
+Do NOT necessarily delete backend URL preference unless intentionally resetting settings.
+
+=========================================================
+13. BOTTOM NAVIGATION
+=========================================================
+
+Create a mobile bottom navigation bar.
+
+Tabs:
+
+Home
+
+Health
+
+Sync
+
+Settings
+
+Use simple consistent icons.
+
+Keep navigation fixed and mobile-friendly.
+
+=========================================================
+14. STATE HANDLING
+=========================================================
+
+Every important screen must handle:
+
+Loading
+
+Success
+
+Empty
+
+Error
+
+Offline/backend unavailable
+
+Do not leave blank screens.
+
+Use clean inline feedback rather than excessive alert() dialogs.
+
+=========================================================
+15. RESPONSIVENESS
+=========================================================
+
+Primary target:
+
+Mobile portrait.
+
+Also support:
+
+Tablet
+
+Desktop browser
+
+Desktop should NOT stretch the mobile application across the entire monitor.
+
+Use a centered responsive app shell.
+
+No horizontal overflow.
+
+No clipped text.
+
+No elements extending outside the viewport.
+
+=========================================================
+16. ACCESSIBILITY / UX
+=========================================================
+
+Ensure:
+
+- Proper button labels
+- Adequate contrast
+- Visible focus states
+- Large touch targets
+- Password visibility toggle
+- Loading indicators
+- Disabled buttons while submitting
+- Meaningful empty states
+- No inaccessible icon-only actions without labels
+
+=========================================================
+17. SECURITY
+=========================================================
+
+Do NOT:
+
+- Hardcode credentials
+- Hardcode real JWTs
+- Put Supabase service keys in frontend code
+- Directly access Supabase from this prototype
+- Send user_id manually with health records
+- Log passwords
+- Log access tokens
+- Display tokens
+
+The frontend communicates only with the existing FastAPI backend.
+
+For Phase A, localStorage may be used for prototype session persistence, but structure authentication storage so it can later be replaced by Android DataStore/secure storage.
+
+=========================================================
+18. ARCHITECTURE
+=========================================================
+
+Use a clean structure similar to:
+
+src/
+
+components/
+  common/
+  health/
+  sync/
+
+pages/
+  Splash/
+  Login/
+  Dashboard/
+  HealthData/
+  Sync/
+  Settings/
+
+api/
+  apiClient
+  authApi
+  healthSyncApi
+
+models/
+
+providers/
+  HealthDataProvider
+  MockHealthDataProvider
+
+context/ or store/
+  auth state
+  app configuration
+
+hooks/
+
+utils/
+
+styles/
+
+Do not over-engineer.
+
+Keep components modular and readable.
+
+=========================================================
+19. IMPORTANT PHASE B PREPARATION
+=========================================================
+
+This web prototype will later be recreated/ported into:
+
+Kotlin
+Jetpack Compose
+Health Connect SDK
+DataStore
+WorkManager
+
+Therefore:
+
+Keep UI logic separated from data-access logic.
+
+Keep API models explicit.
+
+Keep health-data provider abstraction explicit.
+
+Do not create browser-specific hacks that would be difficult to reproduce in Android.
+
+The conceptual architecture should remain:
+
+UI
+
+↓
+
+View/Application State
+
+↓
+
+HealthDataProvider + API Layer
+
+↓
+
+Backend
+
+The Android implementation will replace:
+
+MockHealthDataProvider
+
+with:
+
+HealthConnectDataProvider
+
+and browser/localStorage persistence with Android DataStore.
+
+=========================================================
+20. DO NOT IMPLEMENT YET
+=========================================================
+
+Do NOT implement:
+
+- Actual Android Health Connect
+- Native Android code
+- WorkManager
+- Real background synchronization
+- Registration
+- Push notifications
+- Firebase
+- Direct Supabase access
+- Scheduling
+- Medication features
+- AI assistant
+- Chatbot
+- Doctor functionality
+- Admin functionality
+
+SALUS Sync should remain a tiny focused companion app.
+
+=========================================================
+21. EXECUTION ORDER
+=========================================================
+
+Implement Phase A in this order:
+
+1. Audit/create project structure.
+2. Create theme/design tokens.
+3. Create reusable mobile app shell.
+4. Create Splash.
+5. Create Login.
+6. Create bottom navigation.
+7. Create Dashboard.
+8. Create Health Data screen.
+9. Create Sync screen.
+10. Create Settings.
+11. Create HealthDataProvider abstraction.
+12. Create MockHealthDataProvider.
+13. Create API models/client architecture.
+14. Connect login to the existing API only if a valid backend URL is configured.
+15. Implement backend connection test.
+16. Implement Sync Now flow.
+17. Verify responsive behavior.
+18. Run production build.
+
+Do not make unrelated changes.
+
+=========================================================
+22. FINAL REPORT
+=========================================================
+
+When complete, report:
+
+A. Exact files created
+
+B. Exact files modified
+
+C. Dependencies added
+
+D. Screens implemented
+
+E. Navigation flow
+
+F. API endpoints integrated
+
+G. Mocked functionality
+
+H. What remains intentionally deferred to native Android
+
+I. npm build result
+
+J. Any warnings/errors
+
+K. Exact steps to run the project locally
+
+Do not claim Health Connect works in the browser.
+
+Do not claim background synchronization is implemented.
+
+Do not claim the Android application is complete.
+
+The final result of this phase should be a polished, functional SALUS Sync WEB PROTOTYPE that serves as the design and application-flow specification for the later native Android app.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-07-24T08:07:28+05:30.
+
+The user's current state is as follows:
+Active Document: f:\MedAI - IP\.gitignore (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- f:\MedAI - IP\.gitignore (LANGUAGE_UNSPECIFIED)
+- f:\MedAI - IP\backend\test_phase_6b.py (LANGUAGE_PYTHON)
+- f:\MedAI - IP\frontend\src\components\Sidebar.jsx (LANGUAGE_JAVASCRIPT)
+- f:\MedAI - IP\backend\.env (LANGUAGE_UNSPECIFIED)
+- f:\MedAI - IP\backend\migrate.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from None to Claude Sonnet 4.6 (Thinking). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>

@@ -69,8 +69,13 @@ export function LoginPage() {
       return;
     }
 
-    setSession(response.access_token, response.user);
-    navigate('/dashboard/home', { replace: true });
+    try {
+      await setSession(response.access_token, response.user);
+      navigate('/dashboard/home', { replace: true });
+    } catch (err) {
+      setStatus('error');
+      setErrorMessage(err instanceof Error ? err.message : 'Secure storage unavailable');
+    }
   }
 
   return (
